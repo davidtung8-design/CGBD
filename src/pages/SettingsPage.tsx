@@ -38,7 +38,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
              </div>
           </div>
           
-          <h2 className="text-3xl font-bold tracking-tight text-white">David Tung</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-white">时间管理大师</h2>
           <div className="mt-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-bold text-blue-400 uppercase tracking-widest">
             Elite Strategist & Performance Mentor
           </div>
@@ -158,8 +158,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
            <button 
               onClick={() => {
-                if (confirm('Initiate Factory Reset? All memory nodes will be wiped.')) {
+                const verify = prompt('警告：此操作将永久抹除所有战略数据。如需执行，请在此输入 "RESET":');
+                if (verify === 'RESET') {
                   onClearData();
+                } else if (verify !== null) {
+                  alert('验证失败，操作已中止。数据安全。');
                 }
               }}
               className="flex w-full items-center justify-between p-6 hover:bg-red-500/5 transition-colors group"
@@ -193,7 +196,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="flex items-center gap-4">
                  <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-all"><Phone size={16} /></div>
                  <div>
-                   <span className="block text-[11px] font-bold text-emerald-500 uppercase tracking-wider">Direct Feedback</span>
+                   <span className="block text-[11px] font-bold text-emerald-500 uppercase tracking-wider">David Tung apps 开发者</span>
                    <span className="block text-[9px] text-slate-500 uppercase">WhatsApp Protocol</span>
                  </div>
               </div>

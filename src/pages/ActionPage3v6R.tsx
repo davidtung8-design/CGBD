@@ -176,39 +176,44 @@ export const ActionPage3v6R: React.FC<ActionPage3v6RProps> = ({ perfData, setPer
                 <div className="p-2 bg-accent/20 text-accent rounded-xl">
                    <Flame size={20} />
                 </div>
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Daily Combat Mission</h3>
+                <div>
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Daily Combat Mission · 今日作战任务</h3>
+                  <p className="text-[9px] text-slate-500 mt-1 uppercase font-mono">Input your high-value target strikes for the day</p>
+                </div>
               </div>
               <div className="text-[9px] text-slate-600 font-mono italic">Sector: Tactical Ops</div>
             </div>
             
             <div className="grid gap-8 sm:grid-cols-2">
               <div className="space-y-4">
-                <div className="text-[9px] font-bold text-accent uppercase tracking-widest pl-2 border-l-2 border-accent/30">Tactical Objectives</div>
+                <div className="text-[9px] font-bold text-accent uppercase tracking-widest pl-2 border-l-2 border-accent/30 flex justify-between items-center">
+                  <span>Tactical Objectives / 今日作战目标</span>
+                </div>
                 <textarea 
                   className="w-full rounded-2xl border border-slate-800 bg-slate-900/30 p-4 text-xs font-mono text-white focus:border-accent outline-none min-h-[120px] transition-all"
-                  placeholder="1. Priority Engagement&#10;2. Clause Closure&#10;3. Recruitment Interview..."
+                  placeholder="1. 见5位准客户&#10;2. 完成2个增员面谈&#10;3. 处理完所有文书工作..."
                   value={perfData.dailyMission}
                   onChange={(e) => setPerfData(prev => ({ ...prev, dailyMission: e.target.value }))}
                 />
               </div>
               <div className="space-y-6">
                 <div className="space-y-4">
-                  <div className="text-[9px] font-bold text-accent uppercase tracking-widest pl-2 border-l-2 border-accent/30">Performance Benchmarks</div>
+                  <div className="text-[9px] font-bold text-accent uppercase tracking-widest pl-2 border-l-2 border-accent/30">Performance Benchmarks / 业绩基准</div>
                   <input 
                     className="w-full rounded-2xl border border-slate-800 bg-slate-900/30 p-4 text-xs font-mono text-white focus:border-accent outline-none transition-all"
-                    placeholder="e.g. 3 Completed Interviews"
+                    placeholder="例如：今日成交 2 份保单 / 拿下 $5000 ANP"
                     value={perfData.dailyGoal}
                     onChange={(e) => setPerfData(prev => ({ ...prev, dailyGoal: e.target.value }))}
                   />
                 </div>
                 <div className="p-4 bg-accent/10 border border-accent/20 rounded-2xl">
                    <div className="flex justify-between items-center mb-2">
-                      <div className="text-[9px] text-accent uppercase font-bold tracking-widest">Velocity Tracking</div>
+                      <div className="text-[9px] text-accent uppercase font-bold tracking-widest">Velocity Tracking / 推进速率</div>
                       <div className="text-[9px] text-slate-500 font-mono">{dateKey}</div>
                    </div>
                    <div className="flex justify-between items-baseline">
                       <div className="text-3xl font-mono font-bold text-white text-shadow-glow">{formatNumber(salesTotal + recruitTotal)}</div>
-                      <div className="text-[9px] text-slate-500 uppercase tracking-tighter">Total Engagements</div>
+                      <div className="text-[9px] text-slate-500 uppercase tracking-tighter">Total Daily Engagements (活动量总和)</div>
                    </div>
                 </div>
               </div>
@@ -224,20 +229,25 @@ export const ActionPage3v6R: React.FC<ActionPage3v6RProps> = ({ perfData, setPer
                 <div className="p-2 bg-slate-800 text-slate-400 rounded-xl">
                   <Zap size={18} />
                 </div>
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Biological Assets · Energy</h3>
+                <div>
+                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Biological Assets · 生物资产/能量</h3>
+                   <p className="text-[9px] text-slate-500 mt-1 uppercase font-mono">Your Peak Performance Baseline</p>
+                </div>
               </div>
               
               <div className="space-y-4">
-                <div className="text-[9px] font-bold text-blue-500 uppercase tracking-widest pl-2 border-l-2 border-blue-500/20">Operational Status</div>
+                <div className="text-[9px] font-bold text-blue-500 uppercase tracking-widest pl-2 border-l-2 border-blue-500/20">Operational Status / 运作状态</div>
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { label: 'Energy %', val: perfData.personalEnergy, key: 'personalEnergy' },
-                    { label: 'Focus %', val: perfData.personalFocus, key: 'personalFocus' }
+                    { label: 'Energy % / 体力', val: perfData.personalEnergy, key: 'personalEnergy' },
+                    { label: 'Focus % / 脑力', val: perfData.personalFocus, key: 'personalFocus' }
                   ].map((stat, i) => (
                     <div key={i} className="space-y-2">
                        <span className="text-[9px] text-slate-500 uppercase font-mono">{stat.label}</span>
                        <input 
                          type="number"
+                         max="100"
+                         min="0"
                          className="w-full bg-slate-900/30 border border-slate-800 rounded-xl p-3 text-lg font-mono font-bold text-white outline-none focus:border-blue-500"
                          value={stat.val}
                          onChange={(e) => setPerfData(prev => ({ ...prev, [stat.key]: parseInt(e.target.value) || 0 }))}
@@ -249,7 +259,7 @@ export const ActionPage3v6R: React.FC<ActionPage3v6RProps> = ({ perfData, setPer
             </div>
             
             <div className="mt-8 pt-8 border-t border-slate-800">
-              <div className="text-[9px] text-slate-500 font-mono italic opacity-60">"Your energy is your true currency."</div>
+              <div className="text-[9px] text-slate-500 font-mono italic opacity-60">"Health is the foundation of high-net-worth productivity."</div>
             </div>
           </div>
           <Zap className="absolute -top-10 -right-10 text-blue-500 opacity-5" size={180} />

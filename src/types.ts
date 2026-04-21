@@ -51,6 +51,7 @@ export interface Prospect {
   job: string;
   plan: string;
   note: string;
+  isPinned?: boolean;
 }
 
 export interface RecruitCandidate {
@@ -58,6 +59,7 @@ export interface RecruitCandidate {
   job: string;
   interest: string;
   followup: string;
+  isPinned?: boolean;
 }
 
 export interface Milestone {
@@ -92,6 +94,8 @@ export interface PerfData {
   nightMessage: string;
   milestones: Milestone[];
   wishingStatement: string;
+  personalEnergy: number;
+  personalFocus: number;
   dailyActivitiesLog: Record<string, {
     of: number; p: number; f: number; c: number;
     ro: number; rp: number; rf: number; rs: number;

@@ -50,8 +50,8 @@ export const PerformancePage: React.FC<PerformancePageProps> = ({ perfData, setP
                   <input 
                     type="number"
                     className="text-3xl font-mono text-white bg-transparent border-none outline-none w-full p-0"
-                    defaultValue={stat.value}
-                    onBlur={(e) => {
+                    value={stat.value}
+                    onChange={(e) => {
                       const val = parseFloat(e.target.value) || 0;
                       if (stat.label === '个人QFYLP') setPerfData(prev => ({ ...prev, personalQ: val }));
                       if (stat.label === '团队QFYLP') setPerfData(prev => ({ ...prev, teamQ: val }));
@@ -66,8 +66,8 @@ export const PerformancePage: React.FC<PerformancePageProps> = ({ perfData, setP
                       <input 
                         type="number"
                         className="w-24 bg-transparent border-none outline-none p-0 ml-1 text-slate-600 font-mono focus:text-blue-400"
-                        defaultValue={stat.total}
-                        onBlur={(e) => {
+                        value={stat.total}
+                        onChange={(e) => {
                           const val = parseFloat(e.target.value) || 0;
                           if (stat.label === '个人QFYLP') setPerfData(prev => ({ ...prev, annualTargetGSPC: val }));
                           if (stat.label === '招募战将') setPerfData(prev => ({ ...prev, annualTargetTeam: val }));
@@ -145,8 +145,8 @@ export const PerformancePage: React.FC<PerformancePageProps> = ({ perfData, setP
                       <input 
                         type="number" 
                         className="w-24 bg-slate-900 border border-slate-800 rounded-lg p-2 text-center text-slate-400 font-mono focus:border-blue-500 outline-none"
-                        defaultValue={m.target}
-                        onBlur={(e) => {
+                        value={m.target}
+                        onChange={(e) => {
                           const val = parseFloat(e.target.value) || 0;
                           const newRecords = [...perfData.monthlyRecords];
                           newRecords[i].target = val;
@@ -158,8 +158,8 @@ export const PerformancePage: React.FC<PerformancePageProps> = ({ perfData, setP
                       <input 
                         type="number" 
                         className="w-24 bg-slate-900 border border-slate-800 rounded-lg p-2 text-center text-blue-400 font-mono focus:border-blue-500 outline-none"
-                        defaultValue={m.actual}
-                        onBlur={(e) => {
+                        value={m.actual}
+                        onChange={(e) => {
                           const val = parseFloat(e.target.value) || 0;
                           const newRecords = [...perfData.monthlyRecords];
                           newRecords[i].actual = val;
@@ -171,8 +171,8 @@ export const PerformancePage: React.FC<PerformancePageProps> = ({ perfData, setP
                       <input 
                         type="number" 
                         className="w-16 bg-slate-900 border border-slate-800 rounded-lg p-2 text-center text-emerald-400 font-mono focus:border-emerald-500 outline-none"
-                        defaultValue={m.noc}
-                        onBlur={(e) => {
+                        value={m.noc}
+                        onChange={(e) => {
                           const val = parseInt(e.target.value) || 0;
                           const newRecords = [...perfData.monthlyRecords];
                           newRecords[i].noc = val;
@@ -184,8 +184,8 @@ export const PerformancePage: React.FC<PerformancePageProps> = ({ perfData, setP
                       <input 
                         type="number" 
                         className="w-24 bg-slate-900 border border-slate-800 rounded-lg p-2 text-center text-white/50 font-mono focus:border-blue-500 outline-none"
-                        defaultValue={m.anp}
-                        onBlur={(e) => {
+                        value={m.anp}
+                        onChange={(e) => {
                           const val = parseFloat(e.target.value) || 0;
                           const newRecords = [...perfData.monthlyRecords];
                           newRecords[i].anp = val;
@@ -197,8 +197,8 @@ export const PerformancePage: React.FC<PerformancePageProps> = ({ perfData, setP
                       <input 
                         type="number" 
                         className="w-16 bg-slate-900 border border-slate-800 rounded-lg p-2 text-center text-slate-500 font-mono focus:border-white outline-none"
-                        defaultValue={m.recruitTarget}
-                        onBlur={(e) => {
+                        value={m.recruitTarget}
+                        onChange={(e) => {
                           const val = parseInt(e.target.value) || 0;
                           const newRecords = [...perfData.monthlyRecords];
                           newRecords[i].recruitTarget = val;
@@ -210,8 +210,8 @@ export const PerformancePage: React.FC<PerformancePageProps> = ({ perfData, setP
                       <input 
                         type="number" 
                         className="w-16 bg-slate-900 border border-slate-800 rounded-lg p-2 text-center text-amber-500 font-mono focus:border-amber-500 outline-none"
-                        defaultValue={m.recruitActual}
-                        onBlur={(e) => {
+                        value={m.recruitActual}
+                        onChange={(e) => {
                           const val = parseInt(e.target.value) || 0;
                           const newRecords = [...perfData.monthlyRecords];
                           newRecords[i].recruitActual = val;
@@ -268,10 +268,21 @@ export const PerformancePage: React.FC<PerformancePageProps> = ({ perfData, setP
             </div>
             <div className="grid gap-3">
               {sec.data.map((m, i) => (
-                <div key={i} className={cn(
-                  "flex items-center justify-between rounded-2xl p-4 border transition-all",
-                  m.achieved ? "bg-blue-500/10 border-blue-500/20 text-blue-400" : "bg-slate-900 border-slate-800 text-slate-600"
-                )}>
+                <div 
+                  key={i} 
+                  onClick={() => {
+                    const milestoneIdx = perfData.milestones.findIndex(prevM => prevM.name === m.name);
+                    if (milestoneIdx !== -1) {
+                      const newMilestones = [...perfData.milestones];
+                      newMilestones[milestoneIdx].achieved = !newMilestones[milestoneIdx].achieved;
+                      setPerfData(prev => ({ ...prev, milestones: newMilestones }));
+                    }
+                  }}
+                  className={cn(
+                    "flex items-center justify-between rounded-2xl p-4 border transition-all cursor-pointer hover:scale-[1.02]",
+                    m.achieved ? "bg-blue-500/10 border-blue-500/20 text-blue-400" : "bg-slate-900 border-slate-800 text-slate-600"
+                  )}
+                >
                   <span className="text-[10px] font-bold uppercase tracking-wider">{m.name}</span>
                   <Award size={14} className={m.achieved ? "text-blue-400" : "text-slate-800 opacity-20"} />
                 </div>

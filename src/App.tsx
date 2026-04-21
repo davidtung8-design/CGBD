@@ -10,16 +10,21 @@ import {
   Milestone, PerfData, ThemeKey, ThemeConfig 
 } from './types';
 import { Header } from './components/Header';
-import { Home, Target, ClipboardList, Zap, Settings, Plus, Trash2, CheckCircle2, ChevronLeft, ChevronRight, RefreshCw, Edit3, Award, Calendar, CalendarPlus, History, X, BookOpen, PieChart as PieChartIcon, ListTodo } from 'lucide-react';
+import { Home, Target, ClipboardList, Zap, Settings, Plus, Trash2, CheckCircle2, ChevronLeft, ChevronRight, RefreshCw, Edit3, Award, Trophy, Calendar, CalendarPlus, History, X, BookOpen, PieChart as PieChartIcon, ListTodo } from 'lucide-react';
 import { THEMES, ACTIVITIES, ENCOURAGEMENTS, GROUP_CONFIG } from './constants';
-import { formatNumber, cn } from './lib/utils';
-import { format, startOfWeek, addDays, subWeeks, addWeeks, isSameDay } from 'date-fns';
+import { formatNumber, cn, getLunarDate } from './lib/utils';
+import { 
+  format, startOfWeek, endOfWeek, addDays, subWeeks, addWeeks, 
+  isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, 
+  isSameMonth, addMonths, subMonths, isToday
+} from 'date-fns';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import { PerformancePage } from './pages/PerformancePage';
 import { ListPage } from './pages/ListPage';
 import { ActionPage3v6R } from './pages/ActionPage3v6R';
 import { SettingsPage } from './pages/SettingsPage';
+import { AwardsPage } from './pages/AwardsPage';
 
 // --- Default States ---
 const DEFAULT_MONTHLY: MonthlyRecord[] = [
@@ -33,8 +38,8 @@ const INITIAL_PERF: PerfData = {
   annualTargetGSPC: 450000,
   annualTargetTeam: 10,
   monthlyRecords: DEFAULT_MONTHLY,
-  prospectList: Array(25).fill(null).map(() => ({ name: "", job: "", plan: "", note: "" })),
-  recruitList: Array(25).fill(null).map(() => ({ name: "", job: "", interest: "", followup: "" })),
+  prospectList: [],
+  recruitList: [],
   teamMembers: [],
   weekActs: { OF: 0, P: 0, F: 0, C: 0 },
   weekRecruitActs: { RO: 0, RP: 0, RF: 0, RS: 0 },
@@ -52,12 +57,14 @@ const INITIAL_PERF: PerfData = {
     { name: "🛡️ 团队活跃4人组", achieved: false, category: "recruit" as const }
   ].map(m => ({ ...m })),
   wishingStatement: "",
+  personalEnergy: 100,
+  personalFocus: 100,
   dailyActivitiesLog: {}
 };
 
 export default function App() {
   // --- Navigation ---
-  const [currentPage, setCurrentPage] = useState<'home' | 'perf' | 'list' | '3v6r' | 'settings'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'perf' | 'list' | '3v6r' | 'awards' | 'settings'>('home');
   const [themeKey, setThemeKey] = useState<ThemeKey>('default');
   const theme = THEMES[themeKey] || THEMES.default;
 
@@ -80,6 +87,8 @@ export default function App() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isReflectionArchiveOpen, setIsReflectionArchiveOpen] = useState(false);
   const [ambientSound, setAmbientSound] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState(new Date());
 
   // --- Load Data ---
   useEffect(() => {
@@ -159,6 +168,56 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('dt_sound', ambientSound.toString());
   }, [ambientSound]);
+
+  // --- Data Synchronization ---
+  // Sync total performance figures from monthly records
+  useEffect(() => {
+    const totalActualQ = perfData.monthlyRecords.reduce((sum, r) => sum + (r.actual || 0), 0);
+    const totalNOC = perfData.monthlyRecords.reduce((sum, r) => sum + (r.noc || 0), 0);
+    const totalANP = perfData.monthlyRecords.reduce((sum, r) => sum + (r.anp || 0), 0);
+    const totalRecruit = perfData.monthlyRecords.reduce((sum, r) => sum + (r.recruitActual || 0), 0);
+
+    // Only update if there's a discrepancy to avoid potential update loops
+    if (
+      totalActualQ !== perfData.personalQ ||
+      totalNOC !== perfData.totalNOC ||
+      totalANP !== perfData.totalANP ||
+      totalRecruit !== perfData.recruitCount
+    ) {
+      setPerfData(prev => {
+        // Auto-check milestones
+        const updatedMilestones = prev.milestones.map(m => {
+          let achieved = m.achieved;
+          
+          // Sales Milestones
+          if (m.name.includes("100K") && totalActualQ >= 100000) achieved = true;
+          if (m.name.includes("200K") && totalActualQ >= 200000) achieved = true;
+          if (m.name.includes("300K") && totalActualQ >= 300000) achieved = true;
+          if (m.name.includes("450K") && totalActualQ >= 450000) achieved = true;
+          
+          // Recruit Milestones
+          if (m.name.includes("第1位") && totalRecruit >= 1) achieved = true;
+          if (m.name.includes("第5位") && totalRecruit >= 5) achieved = true;
+          if (m.name.includes("第10位") && totalRecruit >= 10) achieved = true;
+          
+          // Team Activity Milestone (Active members count)
+          const activeMembers = prev.teamMembers.filter(tm => tm.active).length;
+          if (m.name.includes("活跃4人组") && activeMembers >= 4) achieved = true;
+
+          return { ...m, achieved };
+        });
+
+        return {
+          ...prev,
+          personalQ: totalActualQ,
+          totalNOC: totalNOC,
+          totalANP: totalANP,
+          recruitCount: totalRecruit,
+          milestones: updatedMilestones
+        };
+      });
+    }
+  }, [perfData.monthlyRecords, perfData.personalQ, perfData.totalNOC, perfData.totalANP, perfData.recruitCount, perfData.teamMembers]);
 
   // --- Helpers ---
   const todayKey = format(new Date(), 'yyyy-MM-dd');
@@ -245,12 +304,29 @@ export default function App() {
   };
 
   const handleExportReport = () => {
-    // Current week's events
+    // 1. Core Performance Totals
+    const csvRows = ['=== STRATEGIC PERFORMANCE SUMMARY ==='];
+    csvRows.push(`Report Generated,${format(new Date(), 'yyyy-MM-dd HH:mm')}`);
+    csvRows.push(`Total QFYLP,${perfData.personalQ}`);
+    csvRows.push(`Total ANP,${perfData.totalANP}`);
+    csvRows.push(`Total NOC,${perfData.totalNOC}`);
+    csvRows.push(`Recruitment Count,${perfData.recruitCount}`);
+    csvRows.push('');
+
+    // 2. Monthly Aggregate (Summary of monthly logs)
+    csvRows.push('=== MONTHLY LOG SUMMARY (CY 2026) ===');
+    csvRows.push('Month,Target Q,Actual Q,NOC,ANP,Recruit Target,Recruit Actual');
+    perfData.monthlyRecords.forEach(m => {
+      csvRows.push(`${m.month},${m.target},${m.actual},${m.noc},${m.anp},${m.recruitTarget},${m.recruitActual}`);
+    });
+    csvRows.push('');
+
+    // 3. Weekly Detailed Activity (3V6R Stats)
+    const currentMonday = startOfWeek(addWeeks(baseDate, viewOffset), { weekStartsOn: 1 });
     const weekEvents = events.filter(e => e.weekOffset === viewOffset);
     
-    // Group and sum durations
+    // Activity Breakdown by Category
     const reportData: Record<string, { duration: number, items: string[] }> = {};
-    
     weekEvents.forEach(e => {
       const act = ACTIVITIES.find(a => a.id === e.activityId);
       const groupName = act ? (GROUP_CONFIG[act.group as keyof typeof GROUP_CONFIG]?.name || 'Other') : 'Other';
@@ -263,16 +339,51 @@ export default function App() {
       reportData[groupName].items.push(`"${e.title || act?.name || 'Untitled'}" (${duration}h)`);
     });
 
-    // Generate CSV content
-    const csvRows = ['Category,Total Hours,Details'];
+    csvRows.push(`=== WEEKLY TIME MATRIX (${format(currentMonday, 'MM/dd')} - ${format(addDays(currentMonday, 6), 'MM/dd')}) ===`);
+    csvRows.push('Category,Total Hours,Detailed Logs');
     Object.entries(reportData).forEach(([cat, data]) => {
       csvRows.push(`${cat},${data.duration},"${data.items.join('; ')}"`);
     });
-    
-    // Summary line
-    const totalHours = Object.values(reportData).reduce((sum, d) => sum + d.duration, 0);
     csvRows.push('');
-    csvRows.push(`Total Weekly Hours,${totalHours},`);
+
+    // 3.1 Time Allocation Breakdown (Chart logic exported)
+    csvRows.push('=== WEEKLY TIME ALLOCATION (CHART DATA) ===');
+    csvRows.push('Group Name,Hours,Percentage');
+    const totalWeeklyHours = Object.values(reportData).reduce((sum, d) => sum + d.duration, 0);
+    timeAllocationData.forEach(d => {
+      const pct = totalWeeklyHours > 0 ? ((d.value / totalWeeklyHours) * 100).toFixed(1) : '0';
+      csvRows.push(`${d.name},${d.value},${pct}%`);
+    });
+    csvRows.push('');
+
+    // 4. Detailed 3V6R Activity Counts (OPFR & Recruitment)
+    csvRows.push('=== 3V6R DETAILED ACTIVITY (DAILY LOGS) ===');
+    csvRows.push('Date,OPEN (OF),PRESE (P),FOLLOW (F),CLOSE (C),R-OP,R-PR,R-FO,R-SU,Total Sales Ops,Total Recruit Ops,Day QFYLP,Day ANP');
+    
+    // Get keys for this month or recently logged
+    const allLogKeys = Object.keys(perfData.dailyActivitiesLog || {}).sort().reverse();
+    allLogKeys.slice(0, 31).forEach(key => { // Export last 31 days of logs
+      const log = perfData.dailyActivitiesLog![key];
+      const salesTotal = (log.of || 0) + (log.p || 0) + (log.f || 0) + (log.c || 0);
+      const recruitTotal = (log.ro || 0) + (log.rp || 0) + (log.rf || 0) + (log.rs || 0);
+      csvRows.push(`${key},${log.of || 0},${log.p || 0},${log.f || 0},${log.c || 0},${log.ro || 0},${log.rp || 0},${log.rf || 0},${log.rs || 0},${salesTotal},${recruitTotal},${log.q || 0},${log.anp || 0}`);
+    });
+    csvRows.push('');
+
+    // 5. Prospect List (名单页 - 潜在客户)
+    csvRows.push('=== PROSPECT LIST (潜在客户名单) ===');
+    csvRows.push('Name,Occupation,Plan/Target,Notes');
+    perfData.prospectList.forEach(p => {
+      csvRows.push(`"${p.name}","${p.job}","${p.plan}","${p.note}"`);
+    });
+    csvRows.push('');
+
+    // 6. Recruitment Pipeline (名单页 - 增员名单)
+    csvRows.push('=== RECRUITMENT PIPELINE (增员名单) ===');
+    csvRows.push('Name,Occupation,Interest Level,Follow-up Note');
+    perfData.recruitList.forEach(r => {
+      csvRows.push(`"${r.name}","${r.job}","${r.interest}","${r.followup}"`);
+    });
 
     // Force download
     const csvContent = "\ufeff" + csvRows.join('\n'); // Add BOM for Excel UTF-8 support
@@ -280,8 +391,8 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const startStr = format(currentMonday, 'yyyyMMdd');
-    link.setAttribute('download', `weekly_tactical_report_${startStr}.csv`);
+    const dateStr = format(new Date(), 'yyyyMMdd');
+    link.setAttribute('download', `tactical_report_full_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -367,7 +478,7 @@ export default function App() {
           <div className="bento-grid">
             {/* Goal Tracking - Large Bento Card */}
             <div className="bento-card md:col-span-8 p-8 overflow-hidden relative group">
-              <div className="absolute top-0 right-0 p-8 opacity-5">
+              <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
                 <Target size={200} />
               </div>
               <div className="relative z-10">
@@ -375,71 +486,108 @@ export default function App() {
                 
                 <div className="mt-8 grid gap-8 sm:grid-cols-2">
                   <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <h2 className="text-sm font-medium text-slate-400 uppercase tracking-widest">💰 GSPC Performance</h2>
-                      <input 
-                        type="number"
-                        className="w-20 bg-transparent text-right text-xs font-mono text-slate-500 outline-none border-b border-transparent focus:border-blue-500/50"
-                        value={perfData.annualTargetGSPC}
-                        onChange={(e) => setPerfData(prev => ({ ...prev, annualTargetGSPC: parseFloat(e.target.value) || 0 }))}
-                      />
-                    </div>
-                    <div className="flex items-baseline gap-3">
-                      <div className="text-5xl font-light text-white">{formatNumber(perfData.personalQ)}</div>
-                      <div className="text-sm text-slate-500">/ {formatNumber(perfData.annualTargetGSPC)}</div>
-                    </div>
-                    <div className="mt-6 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
-                        style={{ width: `${Math.min(100, (perfData.personalQ / (perfData.annualTargetGSPC || 1)) * 100)}%` }} />
+                    <div className="group/metric cursor-pointer" onClick={(e) => {
+                      const input = e.currentTarget.querySelector('input[type="number"]');
+                      if (input instanceof HTMLInputElement) input.focus();
+                    }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-widest">💰 GSPC Performance</h2>
+                        <input 
+                          type="number"
+                          className="w-24 bg-slate-800/20 hover:bg-slate-800/40 text-right text-xs font-mono text-slate-400 outline-none border-b border-blue-500/30 px-2 py-1 rounded-t-lg transition-colors focus:border-blue-500"
+                          value={perfData.annualTargetGSPC}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => setPerfData(prev => ({ ...prev, annualTargetGSPC: parseFloat(e.target.value) || 0 }))}
+                        />
+                      </div>
+                      <div className="flex items-baseline gap-3">
+                        <input 
+                          type="number"
+                          className="text-5xl font-light text-white bg-transparent border-none outline-none w-full max-w-[220px] p-0 hover:text-blue-400 focus:text-blue-400 transition-colors cursor-text"
+                          value={perfData.personalQ}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const newVal = parseFloat(e.target.value) || 0;
+                            const currentMonthName = format(new Date(), 'M月', { locale: undefined }); // '4月'
+                            setPerfData(prev => {
+                              const newMonthly = prev.monthlyRecords.map(m => {
+                                if (m.month === currentMonthName) {
+                                  // Adjust this month so that the total becomes newVal
+                                  const otherMonthsSum = prev.monthlyRecords
+                                    .filter(om => om.month !== currentMonthName)
+                                    .reduce((sum, om) => sum + (om.actual || 0), 0);
+                                  return { ...m, actual: newVal - otherMonthsSum };
+                                }
+                                return m;
+                              });
+                              return { ...prev, monthlyRecords: newMonthly, personalQ: newVal };
+                            });
+                          }}
+                        />
+                        <div className="text-sm text-slate-500">/ {formatNumber(perfData.annualTargetGSPC)} QFYLP</div>
+                      </div>
+                      <div className="mt-6 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+                          style={{ width: `${Math.min(100, (perfData.personalQ / (perfData.annualTargetGSPC || 1)) * 100)}%` }} />
+                      </div>
                     </div>
                   </div>
 
                   <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <h2 className="text-sm font-medium text-slate-400 uppercase tracking-widest">👥 Team Recruitment</h2>
-                      <input 
-                        type="number"
-                        className="w-16 bg-transparent text-right text-xs font-mono text-slate-500 outline-none border-b border-transparent focus:border-emerald-500/50"
-                        value={perfData.annualTargetTeam}
-                        onChange={(e) => setPerfData(prev => ({ ...prev, annualTargetTeam: parseInt(e.target.value) || 0 }))}
-                      />
-                    </div>
-                    <div className="flex items-baseline gap-3">
-                      <input 
-                        type="number"
-                        className="text-5xl font-light text-white bg-transparent border-none outline-none w-24 p-0"
-                        value={perfData.recruitCount}
-                        onChange={(e) => setPerfData(prev => ({ ...prev, recruitCount: parseInt(e.target.value) || 0 }))}
-                      />
-                      <div className="text-sm text-slate-500">/ {perfData.annualTargetTeam} Players</div>
-                    </div>
-                    <div className="mt-6 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
-                        style={{ width: `${Math.min(100, (perfData.recruitCount / (perfData.annualTargetTeam || 1)) * 100)}%` }} />
+                    <div className="group/metric cursor-pointer" onClick={(e) => {
+                      const input = e.currentTarget.querySelector('input[type="number"]');
+                      if (input instanceof HTMLInputElement) input.focus();
+                    }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-widest">👥 Team Recruitment</h2>
+                        <input 
+                          type="number"
+                          className="w-20 bg-slate-800/20 hover:bg-slate-800/40 text-right text-xs font-mono text-slate-400 outline-none border-b border-emerald-500/30 px-2 py-1 rounded-t-lg transition-colors focus:border-emerald-500"
+                          value={perfData.annualTargetTeam}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => setPerfData(prev => ({ ...prev, annualTargetTeam: parseInt(e.target.value) || 0 }))}
+                        />
+                      </div>
+                      <div className="flex items-baseline gap-3">
+                        <input 
+                          type="number"
+                          className="text-5xl font-light text-white bg-transparent border-none outline-none w-full max-w-[140px] p-0 hover:text-emerald-400 focus:text-emerald-400 transition-colors cursor-text"
+                          value={perfData.recruitCount}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const newVal = parseInt(e.target.value) || 0;
+                            const currentMonthName = format(new Date(), 'M月', { locale: undefined });
+                            setPerfData(prev => {
+                              const newMonthly = prev.monthlyRecords.map(m => {
+                                if (m.month === currentMonthName) {
+                                  const otherMonthsSum = prev.monthlyRecords
+                                    .filter(om => om.month !== currentMonthName)
+                                    .reduce((sum, om) => sum + (om.recruitActual || 0), 0);
+                                  return { ...m, recruitActual: newVal - otherMonthsSum };
+                                }
+                                return m;
+                              });
+                              return { ...prev, monthlyRecords: newMonthly, recruitCount: newVal };
+                            });
+                          }}
+                        />
+                        <div className="text-sm text-slate-500">/ {perfData.annualTargetTeam} Players</div>
+                      </div>
+                      <div className="mt-6 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
+                          style={{ width: `${Math.min(100, (perfData.recruitCount / (perfData.annualTargetTeam || 1)) * 100)}%` }} />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-10 flex flex-wrap gap-4 items-center">
-                  <div className="flex-1">
-                    <input 
-                      type="number" 
-                      className="w-full rounded-2xl border border-slate-800 bg-slate-900/80 p-3 text-sm text-white outline-none focus:border-blue-500"
-                      placeholder="Update Current Performance Pts..."
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
-                        setPerfData(prev => ({ ...prev, personalQ: val }));
-                      }}
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* Wishing Statement (许愿文) */}
+            {/* Wishing Statement (许愿文) moved and resized */}
             <div className={cn(
-              "bento-card md:col-span-4 md:row-span-2 p-6 flex flex-col justify-between overflow-hidden relative transition-colors duration-300",
-              isDarkMode ? "bg-slate-900/40" : "bg-white border-slate-200"
+              "bento-card md:col-span-4 p-6 flex flex-col justify-between overflow-hidden relative transition-colors duration-300",
+              isDarkMode ? "bg-slate-900/40" : "bg-white border-slate-200 shadow-sm"
             )}>
               <div className="absolute -bottom-4 -right-4 opacity-10">
                 <Target size={100} className="text-amber-500" />
@@ -452,14 +600,176 @@ export default function App() {
               </div>
               <textarea 
                 className={cn(
-                  "flex-1 w-full bg-transparent text-sm font-medium leading-relaxed italic border-none outline-none resize-none custom-scrollbar min-h-[150px]",
+                  "flex-1 w-full bg-transparent text-sm font-medium leading-relaxed italic border-none outline-none resize-none custom-scrollbar min-h-[100px]",
                   isDarkMode ? "text-slate-100 placeholder:text-slate-700" : "text-slate-800 placeholder:text-slate-300"
                 )}
                 placeholder="在此写下您的许愿文，让宇宙能量为您加持..."
                 value={perfData.wishingStatement || ""}
                 onChange={(e) => setPerfData(prev => ({ ...prev, wishingStatement: e.target.value }))}
               />
-              <p className="text-[9px] text-slate-500 mt-4 uppercase font-mono italic">Universe Attraction active...</p>
+            </div>
+
+            {/* Monthly Command Center (New Calendar Card) */}
+            <div className={cn(
+              "bento-card md:col-span-4 p-6 flex flex-col transition-colors duration-300",
+              isDarkMode ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+            )}>
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-2">
+                  <Calendar size={16} className="text-blue-500" />
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Monthly Matrix</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setCalendarMonth(prev => subMonths(prev, 1))} className="p-1 hover:bg-white/10 rounded-lg"><ChevronLeft size={14} /></button>
+                  <span className="text-[10px] font-mono font-bold text-white uppercase">{format(calendarMonth, 'MMM yyyy')}</span>
+                  <button onClick={() => setCalendarMonth(prev => addMonths(prev, 1))} className="p-1 hover:bg-white/10 rounded-lg"><ChevronRight size={14} /></button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => (
+                  <span key={d} className="text-[8px] font-bold text-slate-600 uppercase">{d}</span>
+                ))}
+              </div>
+              
+              <div className="grid grid-cols-7 gap-1">
+                {(() => {
+                  const start = startOfWeek(startOfMonth(calendarMonth), { weekStartsOn: 1 });
+                  const end = endOfWeek(endOfMonth(calendarMonth), { weekStartsOn: 1 });
+                  const days = eachDayOfInterval({ start, end });
+                  
+                  return days.map(day => {
+                    const isSelected = isSameDay(day, selectedCalendarDay);
+                    const isTodayLocal = isToday(day);
+                    const isCurrentMonth = isSameMonth(day, calendarMonth);
+                    
+                    // Check if has events
+                    const dayOfWeek = day.getDay();
+                    const adjustedWeekday = dayOfWeek === 0 ? 0 : dayOfWeek; // Adjust if needed, current system uses 0 for Sunday
+                    
+                    const mondayBase = startOfWeek(baseDate, { weekStartsOn: 1 });
+                    const mondayDay = startOfWeek(day, { weekStartsOn: 1 });
+                    const diffWeeks = Math.round((mondayDay.getTime() - mondayBase.getTime()) / (7 * 24 * 60 * 60 * 1000));
+                    
+                    const hasEvents = events.some(e => e.weekday === adjustedWeekday && e.weekOffset === diffWeeks);
+
+                    return (
+                      <button 
+                        key={day.toISOString()}
+                        onClick={() => {
+                          setSelectedCalendarDay(day);
+                          setViewOffset(diffWeeks);
+                        }}
+                        className={cn(
+                          "relative aspect-square flex items-center justify-center text-[10px] rounded-lg transition-all",
+                          !isCurrentMonth && "opacity-20",
+                          isSelected 
+                            ? (isDarkMode ? "bg-white text-black font-black" : "bg-slate-900 text-white font-black") 
+                            : (isTodayLocal ? "text-blue-500 font-black border border-blue-500/30" : "text-slate-400 hover:bg-white/5"),
+                        )}
+                      >
+                        {format(day, 'd')}
+                        {hasEvents && !isSelected && (
+                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-500" />
+                        )}
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Day Preview */}
+              <div className="mt-6 pt-6 border-t border-slate-800/50">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{format(selectedCalendarDay, 'EEEE, d MMM')}</span>
+                  <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-500/50" />
+                </div>
+                <div className="space-y-2 max-h-[100px] overflow-y-auto custom-scrollbar pr-1">
+                  {(() => {
+                    const dayOfWeek = selectedCalendarDay.getDay();
+                    const adjustedWeekday = dayOfWeek === 0 ? 0 : dayOfWeek;
+                    const mondayBase = startOfWeek(baseDate, { weekStartsOn: 1 });
+                    const mondayDay = startOfWeek(selectedCalendarDay, { weekStartsOn: 1 });
+                    const diffWeeks = Math.round((mondayDay.getTime() - mondayBase.getTime()) / (7 * 24 * 60 * 60 * 1000));
+                    
+                    const dayEvents = events.filter(e => e.weekday === adjustedWeekday && e.weekOffset === diffWeeks)
+                      .sort((a, b) => a.startHour - b.startHour);
+
+                    if (dayEvents.length === 0) return <p className="text-[9px] italic text-slate-600">No tactical deployments scheduled.</p>;
+                    
+                    return dayEvents.map(e => {
+                      const act = ACTIVITIES.find(a => a.id === e.activityId);
+                      const groupColor = GROUP_CONFIG[act?.group as keyof typeof GROUP_CONFIG]?.color || '#333';
+                      return (
+                        <div key={e.id} className="flex items-center gap-3 p-2 rounded-xl bg-slate-800/10 border border-slate-800/20">
+                          <div className="w-1 h-4 rounded-full" style={{ backgroundColor: groupColor }} />
+                          <div className="flex-1">
+                            <div className="flex justify-between text-[9px] font-bold text-white tracking-widest">
+                              <span>{e.title}</span>
+                              <span className="font-mono text-slate-500">{e.startHour}:00</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* 5352111 Elite Discipline Protocol */}
+            <div className={cn(
+              "bento-card md:col-span-8 p-8 relative overflow-hidden",
+              isDarkMode ? "bg-slate-900/60 border-blue-500/20" : "bg-blue-50/30 border-blue-100"
+            )}>
+              <div className="absolute top-0 right-0 p-8 opacity-5">
+                <Zap size={160} className="text-blue-500" />
+              </div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20">
+                      <Zap size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 leading-none">Elite Protocol 5352111</h3>
+                      <p className="text-[9px] text-slate-500 mt-1 uppercase font-medium">每日核心作业纪律 · Core Discipline</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-mono font-bold text-blue-500 tracking-tighter">7.75h</span>
+                    <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-widest">Total Required</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { id: 'a', val: '5', label: '新朋友', desc: '认识5位新朋友/陌生人', time: '15 Min' },
+                    { id: 'b', val: '3', label: '工作预约', desc: '预定3个工作相关预约', time: '135 Min' },
+                    { id: 'c', val: '5', label: '保户电话', desc: '持打5电话于保户/准保户', time: '15 Min' },
+                    { id: 'd', val: '2', label: '大客户', desc: '应酬影响中心/大客户', time: '120 Min' },
+                    { id: 'e', val: '1', label: '复习学习', desc: '复习/学习业务相关知识', time: '60 Min' },
+                    { id: 'f', val: '1', label: '深度阅读', desc: '阅读业务相关知识内容', time: '60 Min' },
+                    { id: 'g', val: '1', label: '文书处理', desc: '文书极速处理', time: '60 Min' },
+                    { id: 'h', val: '8', label: '8/8/8 平衡', desc: '睡眠/工作/休闲平衡分配', time: '24 Hour' }
+                  ].map((item, i) => (
+                    <div key={i} className={cn(
+                      "p-4 rounded-2xl border transition-all hover:translate-y-[-2px]",
+                      isDarkMode ? "bg-slate-950/40 border-slate-800 hover:border-blue-500/40" : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
+                    )}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[10px] font-bold text-blue-500 px-2 py-0.5 bg-blue-500/10 rounded-full">{item.val}</span>
+                        <span className="text-[9px] font-mono text-slate-500 uppercase">{item.time}</span>
+                      </div>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-2">{item.label}</p>
+                      <p className={cn(
+                        "text-[10px] leading-snug",
+                        isDarkMode ? "text-slate-500" : "text-slate-600"
+                      )}>{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Encouragement Card (Inspiration Node) */}
@@ -550,7 +860,7 @@ export default function App() {
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
                   <Edit3 size={16} className="text-slate-500" />
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Tactical Reflection</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Tactical Reflection · 今日检讨/反思</h3>
                 </div>
                 <button 
                   onClick={() => setIsReflectionArchiveOpen(true)}
@@ -585,7 +895,7 @@ export default function App() {
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
                   <Award size={16} className="text-slate-500" />
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Gratitude Synthesis</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Gratitude Synthesis · 今日感恩/鼓励自己</h3>
                 </div>
                 <button 
                   onClick={() => setIsReflectionArchiveOpen(true)}
@@ -656,6 +966,37 @@ export default function App() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-4">
+                  {/* Date/Week Jump Picker - Enhanced Accessibility */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => {
+                        const input = document.getElementById('week-jump') as HTMLInputElement;
+                        input.focus();
+                        input.click(); // Trigger native click which often opens picker
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-1.5 rounded-xl border transition-all cursor-pointer",
+                        isDarkMode ? "bg-slate-900 border-slate-800 hover:border-slate-600 active:bg-slate-800" : "bg-white border-slate-200 shadow-sm hover:border-slate-300 active:bg-slate-50"
+                      )}
+                    >
+                      <Target size={12} className="text-blue-500" />
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Jump to Node</span>
+                    </button>
+                    <input 
+                      id="week-jump"
+                      type="date" 
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      onChange={(e) => {
+                        if (!e.target.value) return;
+                        const targetDate = new Date(e.target.value);
+                        const mondayNow = startOfWeek(new Date(), { weekStartsOn: 1 });
+                        const mondayTarget = startOfWeek(targetDate, { weekStartsOn: 1 });
+                        const diffWeeks = Math.round((mondayTarget.getTime() - mondayNow.getTime()) / (7 * 24 * 60 * 60 * 1000));
+                        setViewOffset(diffWeeks);
+                      }}
+                    />
+                  </div>
+
                   <button 
                     onClick={handleSyncAppleCalendar}
                     className={cn(
@@ -668,24 +1009,41 @@ export default function App() {
                     <CalendarPlus size={14} /> 一键同步 Apple 日历 (Sync Apple)
                   </button>
                   <div className={cn(
-                    "flex p-1 rounded-2xl transition-colors duration-300",
+                    "flex p-1 rounded-2xl transition-colors duration-300 gap-1",
                     isDarkMode ? "bg-slate-800/50" : "bg-slate-200/50"
                   )}>
-                  {[-1, 0, 1].map(off => (
                     <button 
-                      key={off}
-                      onClick={() => setViewOffset(off)}
+                      onClick={() => setViewOffset(prev => prev - 1)}
+                      className={cn(
+                        "p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                      )}
+                      title="Previous Week"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    
+                    <button 
+                      onClick={() => setViewOffset(0)}
                       className={cn(
                         "px-4 py-2 rounded-xl text-[10px] font-bold transition-all uppercase tracking-widest",
-                        viewOffset === off 
+                        viewOffset === 0 
                           ? (isDarkMode ? "bg-white text-black shadow-lg" : "bg-slate-900 text-white shadow-lg")
                           : (isDarkMode ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600")
                       )}
                     >
-                      {off === 0 ? 'Current' : off === -1 ? 'Previous' : 'Upcoming'}
+                      Current
                     </button>
-                  ))}
-                </div>
+
+                    <button 
+                      onClick={() => setViewOffset(prev => prev + 1)}
+                      className={cn(
+                        "p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                      )}
+                      title="Next Week"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
               </div>
             </div>
 
@@ -699,26 +1057,29 @@ export default function App() {
                       )}>Timeline</th>
                       {weekDays.map((day, i) => (
                         <th key={i} className={cn(
-                          "p-4 border-b font-medium transition-colors",
+                          "p-4 border-b font-medium transition-colors text-center",
                           isDarkMode ? "text-slate-400 border-slate-800" : "text-slate-500 border-slate-200"
                         )}>
-                          {format(day, 'EEE')} <br />
-                          <span className={cn(
-                            "text-sm font-light",
-                            isDarkMode ? "text-white" : "text-slate-900"
-                          )}>{format(day, 'dd')}</span>
+                          <div className="flex flex-col items-center">
+                            <span className="uppercase tracking-widest text-[8px] font-bold opacity-60 mb-1">{format(day, 'EEE')}</span>
+                            <span className={cn(
+                              "text-sm font-light mb-1",
+                              isDarkMode ? "text-white" : "text-slate-900"
+                            )}>{format(day, 'MM/dd')}</span>
+                            <span className="text-[9px] text-blue-500/80 font-medium">{getLunarDate(day)}</span>
+                          </div>
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map(hour => (
+                    {[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2].map(hour => (
                       <tr key={hour} className={cn("border-b transition-colors", isDarkMode ? "border-slate-800/30" : "border-slate-200")}>
                         <td className={cn(
                           "sticky left-0 z-10 border-r p-2 text-center text-slate-500 font-mono transition-colors",
                           isDarkMode ? "border-slate-800 bg-slate-900/80" : "border-slate-200 bg-slate-50/80 backdrop-blur-sm"
                         )}>
-                           {hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour-12}:00 PM`}
+                           {hour === 0 ? '12:00 AM' : hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour-12}:00 PM`}
                         </td>
                         {Array.from({ length: 7 }).map((_, dayIdx) => {
                           const weekday = dayIdx === 6 ? 0 : dayIdx + 1;
@@ -782,6 +1143,7 @@ export default function App() {
         {currentPage === 'perf' && <PerformancePage perfData={perfData} setPerfData={setPerfData} theme={theme} />}
         {currentPage === 'list' && <ListPage perfData={perfData} setPerfData={setPerfData} isDarkMode={isDarkMode} />}
         {currentPage === '3v6r' && <ActionPage3v6R perfData={perfData} setPerfData={setPerfData} theme={theme} />}
+        {currentPage === 'awards' && <AwardsPage perfData={perfData} isDarkMode={isDarkMode} theme={theme} />}
         {currentPage === 'settings' && <SettingsPage 
           themeKey={themeKey} 
           setThemeKey={setThemeKey} 
@@ -824,6 +1186,7 @@ export default function App() {
             { id: 'perf', icon: <Target size={20} />, label: 'Core' },
             { id: 'list', icon: <ClipboardList size={20} />, label: 'Matrix' },
             { id: '3v6r', icon: <Zap size={20} />, label: 'Pulse' },
+            { id: 'awards', icon: <Trophy size={18} />, label: 'Contest' },
             { id: 'settings', icon: <Settings size={20} />, label: 'Configs' }
           ].map(item => (
             <button 

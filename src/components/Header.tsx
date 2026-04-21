@@ -35,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-3">
           <DTIcon theme={theme} size={32} />
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center">
-            David Tung <span className="text-accent text-[10px] font-mono align-top ml-2 bg-accent/10 px-2 py-0.5 rounded-full border border-accent/20 uppercase">2026 Elite</span>
+            时间管理大师 <span className="text-accent text-[10px] font-mono align-top ml-2 bg-accent/10 px-2 py-0.5 rounded-full border border-accent/20 uppercase">2026 Elite</span>
           </h1>
         </div>
         <p className="text-slate-500 text-[10px] uppercase tracking-[0.2em] mt-1 ml-11">Personal Intelligence & Performance Dashboard</p>
@@ -70,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
               <Zap size={20} className="group-hover:scale-110 transition-transform" />
            </button>
            <div className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center font-bold border border-slate-700 text-slate-100 text-sm">
-             DT
+             2026
            </div>
         </div>
       </div>
