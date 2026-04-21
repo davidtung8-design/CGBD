@@ -462,16 +462,38 @@ export default function App() {
       icsContent.push('END:VEVENT');
     });
 
-    icsContent.push('END:VCALENDAR');
-
-    const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const icsString = icsContent.join('\r\n');
+    const blob = new Blob([icsString], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
+    
+    // For iOS Safari, blob downloads can be tricky. Try multiple methods.
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', 'david_tung_matrix.ics');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    
+    // Check if it's iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    if (isIOS) {
+      // Fallback for some iOS browsers that block blob downloads
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result;
+        const fallbackLink = document.createElement('a');
+        fallbackLink.href = `data:text/calendar;base64,${(base64data as string).split(',')[1]}`;
+        fallbackLink.setAttribute('download', 'david_tung_matrix.ics');
+        document.body.appendChild(fallbackLink);
+        fallbackLink.click();
+        document.body.removeChild(fallbackLink);
+      };
+      reader.readAsDataURL(blob);
+      
+      alert('正在生成日历文件。如果您的 iPhone 没有自动弹出“添加到日历”，请查看文件夹中的 .ics 文件并打开它。');
+    } else {
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   }, [events, baseDate]);
 
   // --- Rendering ---
