@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   Activity, CalendarEvent, TodoItem, DailyData, 
   MonthlyRecord, TeamMember, Prospect, RecruitCandidate, 
@@ -87,6 +87,29 @@ export default function App() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isReflectionArchiveOpen, setIsReflectionArchiveOpen] = useState(false);
   const [ambientSound, setAmbientSound] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Initialize audio node
+    if (!audioRef.current) {
+      audioRef.current = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3'); // Tranquil piano/lo-fi style
+      audioRef.current.loop = true;
+      audioRef.current.volume = 0.4;
+    }
+
+    if (ambientSound) {
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Audio playback failed:", error);
+          // Auto-disable if playback failed (e.g. no user gesture)
+          setAmbientSound(false);
+        });
+      }
+    } else {
+      audioRef.current.pause();
+    }
+  }, [ambientSound]);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedCalendarDay, setSelectedCalendarDay] = useState(new Date());
 
@@ -458,7 +481,10 @@ export default function App() {
         fontFamily: '-apple-system, sans-serif' 
       } as React.CSSProperties}>
       
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 mb-24">
+      <div className={cn(
+        "mx-auto max-w-7xl px-4 sm:px-6 mb-24 transition-all duration-700",
+        isFocusMode && "saturate-[0.5] brightness-[0.8] blur-[0.2px]"
+      )}>
         <Header 
           theme={theme}
           onOpenCalendar={() => setIsCalendarOpen(true)}
@@ -475,7 +501,10 @@ export default function App() {
         />
 
         {currentPage === 'home' && (
-          <div className="bento-grid">
+          <div className={cn(
+            "bento-grid transition-all duration-700",
+            isFocusMode && "gap-10 scale-[0.99] opacity-90"
+          )}>
             {/* Goal Tracking - Large Bento Card */}
             <div className="bento-card md:col-span-8 p-8 overflow-hidden relative group">
               <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
@@ -1162,8 +1191,9 @@ export default function App() {
       
       {/* Footer System Status Bar */}
       <footer className={cn(
-        "fixed bottom-0 left-0 right-0 backdrop-blur-md px-12 py-3 flex justify-between items-center text-[9px] uppercase tracking-[0.2em] border-t z-[60] transition-colors duration-300",
-        isDarkMode ? "bg-slate-950/80 text-slate-600 border-slate-800" : "bg-white/80 text-slate-400 border-slate-200"
+        "fixed bottom-0 left-0 right-0 backdrop-blur-md px-12 py-3 flex justify-between items-center text-[9px] uppercase tracking-[0.2em] border-t z-[60] transition-all duration-500",
+        isDarkMode ? "bg-slate-950/80 text-slate-600 border-slate-800" : "bg-white/80 text-slate-400 border-slate-200",
+        isFocusMode && "opacity-0 translate-y-full pointer-events-none"
       )}>
         <div className="flex items-center gap-2">
           System status: <span className="text-emerald-500 font-bold flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Nominal</span>
