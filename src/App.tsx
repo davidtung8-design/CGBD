@@ -28,13 +28,24 @@ import { AwardsPage } from './pages/AwardsPage';
 
 // --- Default States ---
 const DEFAULT_MONTHLY: MonthlyRecord[] = [
-  "1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"
-].map(m => ({
-  month: m, target: 50000, actual: 0, noc: 0, anp: 0, recruitTarget: (m === "12月" ? 2 : 1), recruitActual: 0
+  { m: "1月", a: 130000 },
+  { m: "2月", a: 130000 },
+  { m: "3月", a: 130000 },
+  { m: "4月", a: 145211 },
+  { m: "5月", a: 0 },
+  { m: "6月", a: 0 },
+  { m: "7月", a: 0 },
+  { m: "8月", a: 0 },
+  { m: "9月", a: 0 },
+  { m: "10月", a: 0 },
+  { m: "11月", a: 0 },
+  { m: "12月", a: 0 }
+].map(data => ({
+  month: data.m, target: 50000, actual: data.a, noc: 0, anp: 0, recruitTarget: (data.m === "12月" ? 2 : 1), recruitActual: 0
 }));
 
 const INITIAL_PERF: PerfData = {
-  personalQ: 0, teamQ: 0, recruitCount: 0, totalNOC: 0, totalANP: 0,
+  personalQ: 535211, teamQ: 0, recruitCount: 0, totalNOC: 0, totalANP: 0,
   annualTargetGSPC: 450000,
   annualTargetTeam: 10,
   monthlyRecords: DEFAULT_MONTHLY,
@@ -47,10 +58,10 @@ const INITIAL_PERF: PerfData = {
   dailyActivities: { of: 0, p: 0, f: 0, c: 0, ro: 0, rp: 0, rf: 0, rs: 0 },
   nightMessage: "",
   milestones: [
-    { name: "🔥 个人100K QFYLP", achieved: false, category: "sales" as const },
-    { name: "⚡ 个人200K QFYLP", achieved: false, category: "sales" as const },
-    { name: "🏆 个人300K QFYLP", achieved: false, category: "sales" as const },
-    { name: "👑 个人450K GSPC", achieved: false, category: "sales" as const },
+    { name: "🔥 个人100K QFYLP", achieved: true, category: "sales" as const },
+    { name: "⚡ 个人200K QFYLP", achieved: true, category: "sales" as const },
+    { name: "🏆 个人300K QFYLP", achieved: true, category: "sales" as const },
+    { name: "👑 个人450K GSPC", achieved: true, category: "sales" as const },
     { name: "🤝 招募第1位战将", achieved: false, category: "recruit" as const },
     { name: "🌟 招募第5位战将", achieved: false, category: "recruit" as const },
     { name: "💎 招募第10位精英", achieved: false, category: "recruit" as const },
@@ -463,36 +474,30 @@ export default function App() {
     });
 
     const icsString = icsContent.join('\r\n');
-    const blob = new Blob([icsString], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
     
-    // For iOS Safari, blob downloads can be tricky. Try multiple methods.
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'david_tung_matrix.ics');
-    
-    // Check if it's iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    
-    if (isIOS) {
-      // Fallback for some iOS browsers that block blob downloads
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64data = reader.result;
-        const fallbackLink = document.createElement('a');
-        fallbackLink.href = `data:text/calendar;base64,${(base64data as string).split(',')[1]}`;
-        fallbackLink.setAttribute('download', 'david_tung_matrix.ics');
-        document.body.appendChild(fallbackLink);
-        fallbackLink.click();
-        document.body.removeChild(fallbackLink);
-      };
-      reader.readAsDataURL(blob);
+    try {
+      // Step 1: Prepare the file on the backend
+      const response = await fetch('/api/calendar/prepare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ icsContent: icsString })
+      });
       
-      alert('正在生成日历文件。如果您的 iPhone 没有自动弹出“添加到日历”，请查看文件夹中的 .ics 文件并打开它。');
-    } else {
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (!response.ok) throw new Error('API Sync Failed');
+      
+      const { id } = await response.json();
+      
+      // Step 2: Redirect to the download URL
+      // On iOS, a direct link to a URL ending in .ics with the correct headers 
+      // is the most reliable way to trigger the "Add to Calendar" prompt.
+      const downloadUrl = `/api/calendar/download/${id}.ics`;
+      
+      // We use window.open for better iframe compatibility, or location.href
+      window.location.href = downloadUrl;
+      
+    } catch (error) {
+      console.error('Calendar sync error:', error);
+      alert('同步失败，请重试或联系开发者。');
     }
   }, [events, baseDate]);
 
