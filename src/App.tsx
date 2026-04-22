@@ -222,6 +222,15 @@ export default function App() {
 
   // --- Auto Save to Local & Cloud ---
   useEffect(() => {
+    localStorage.setItem('dt_dark_mode', isDarkMode.toString());
+    if (isDarkMode) {
+      document.body.classList.remove('light-mode');
+    } else {
+      document.body.classList.add('light-mode');
+    }
+  }, [isDarkMode]);
+
+  useEffect(() => {
     localStorage.setItem('dt_events', JSON.stringify(events));
   }, [events]);
 
@@ -613,17 +622,17 @@ export default function App() {
         {/* Protocol Details Modal */}
         <AnimatePresence>
           {isProtocolModalOpen && activeProtocolId && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm bg-black/60">
+            <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 backdrop-blur-md bg-black/80">
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 className={cn(
-                  "w-full max-w-lg rounded-[2.5rem] shadow-2xl p-8 border overflow-hidden",
+                  "w-full max-w-lg rounded-[2.5rem] shadow-2xl p-6 sm:p-8 border overflow-hidden flex flex-col",
                   isDarkMode ? "bg-slate-950 border-slate-800" : "bg-white border-slate-200"
                 )}
               >
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex justify-between items-center mb-6 shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-blue-500 text-white rounded-2xl shadow-lg shadow-blue-500/20">
                       <Zap size={20} />
@@ -645,7 +654,7 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2 mb-8">
+                <div className="space-y-4 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto custom-scrollbar pr-2 mb-6 flex-1">
                   {(() => {
                     const protocolDetails = dailyData[todayKey]?.protocolDetails?.[activeProtocolId] || ["", "", "", "", ""];
                     // Ensure enough slots based on the val
@@ -728,7 +737,68 @@ export default function App() {
             "bento-grid transition-all duration-700",
             isFocusMode && "gap-10 scale-[0.99] opacity-90"
           )}>
-            {/* 5352111 Elite Discipline Protocol */}
+            {/* 1. Wishing Statement (许愿文) - HIGHER & LARGER */}
+            <div className={cn(
+              "bento-card md:col-span-8 p-10 flex flex-col justify-between overflow-hidden relative transition-colors duration-700 group",
+              isDarkMode ? "bg-slate-900/60 border-amber-500/20" : "bg-amber-50/30 border-amber-100"
+            )}>
+              <div className="absolute -bottom-10 -right-10 opacity-5 group-hover:scale-110 transition-transform duration-1000">
+                <Target size={250} className="text-amber-500" />
+              </div>
+              <div className="relative z-10">
+                <div className="flex justify-between items-center mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-500/20">
+                      <Target size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-amber-600 leading-none">Manifestation Protocol</h3>
+                      <p className="text-[9px] text-slate-500 mt-1 uppercase font-medium">许愿文 · Strategic Intent</p>
+                    </div>
+                  </div>
+                  <div className="text-[9px] text-slate-500 font-mono uppercase tracking-widest">
+                    Sector: Goal Resonance
+                  </div>
+                </div>
+                <textarea 
+                  className={cn(
+                    "w-full bg-transparent text-xl font-medium leading-relaxed italic border-none outline-none resize-none custom-scrollbar min-h-[160px] transition-colors",
+                    isDarkMode ? "text-slate-100 placeholder:text-slate-800" : "text-slate-900 placeholder:text-slate-300"
+                  )}
+                  placeholder="在此写下您的许愿文，让宇宙能量为您加持..."
+                  value={perfData.wishingStatement || ""}
+                  onChange={(e) => setPerfData(prev => ({ ...prev, wishingStatement: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* 2. Inspiration Node - COMPACT SIDEBAR */}
+            <div 
+              onClick={() => setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)])}
+              className={cn(
+                "bento-card md:col-span-4 p-8 flex flex-col justify-between cursor-pointer transition-all duration-300 group",
+                isDarkMode ? "bg-slate-900/40 hover:bg-slate-800/30 border-slate-800" : "bg-white border-slate-200 hover:bg-slate-50 shadow-sm"
+              )}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Inspiration Node</span>
+                </div>
+                <RefreshCw size={14} className="text-slate-600 group-hover:rotate-180 transition-transform duration-500" />
+              </div>
+              <div className="mt-4 flex-1 flex flex-col justify-center text-center px-2">
+                <p className={cn(
+                  "text-base font-medium leading-relaxed italic transition-colors",
+                  isDarkMode ? "text-slate-200 group-hover:text-blue-400" : "text-slate-800 group-hover:text-blue-600"
+                )}>"{encouragement || 'Preparing insight...'}"</p>
+              </div>
+              <div className="mt-4 pt-4 border-t border-slate-800/40">
+                <p className="text-[8px] text-slate-600 uppercase font-mono tracking-widest text-center italic">"Wisdom is operational excellence"</p>
+              </div>
+            </div>
+
+            {/* 3. Elite Discipline Protocol */}
             <div className={cn(
               "bento-card md:col-span-8 p-8 relative overflow-hidden",
               isDarkMode ? "bg-slate-900/60 border-blue-500/20" : "bg-blue-50/30 border-blue-100"
@@ -747,9 +817,17 @@ export default function App() {
                       <p className="text-[9px] text-slate-500 mt-1 uppercase font-medium">每日核心作业纪律 · Core Discipline</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-2xl font-mono font-bold text-blue-500 tracking-tighter">7.75h</span>
-                    <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-widest">Total Required</span>
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={() => setIsReflectionArchiveOpen(true)}
+                      className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-[10px] font-bold text-blue-500 uppercase tracking-widest hover:bg-blue-500/20 transition-all"
+                    >
+                      History Archive
+                    </button>
+                    <div className="text-right">
+                      <span className="text-2xl font-mono font-bold text-blue-500 tracking-tighter">7.75h</span>
+                      <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-widest">Total Required</span>
+                    </div>
                   </div>
                 </div>
 
@@ -839,6 +917,24 @@ export default function App() {
                               ? (isCompleted ? "text-slate-400" : "text-slate-500") 
                               : "text-slate-500"
                           )}>{item.desc}</p>
+                          
+                          {/* Progress Details Preview */}
+                          {(() => {
+                            const details = currentDaily.protocolDetails?.[item.id] || [];
+                            const filledDetails = details.filter(d => d.trim());
+                            if (filledDetails.length === 0) return null;
+                            return (
+                              <div className={cn(
+                                "mb-3 p-2 rounded-lg border text-[8px] font-mono leading-tight",
+                                isDarkMode ? "bg-black/20 border-slate-800 text-slate-400" : "bg-white border-slate-200 text-slate-600 shadow-inner"
+                              )}>
+                                {filledDetails.map((d, di) => (
+                                  <div key={di} className="break-words mb-1 last:mb-0">• {d}</div>
+                                ))}
+                              </div>
+                            );
+                          })()}
+
                           <div className="flex justify-between items-center text-[8px] font-mono uppercase tracking-tighter">
                             <span className={isCompleted ? "text-blue-500" : "text-slate-600"}>{isCompleted ? 'Node Sync OK' : 'Pending'}</span>
                             <span className="text-slate-600">{item.time}</span>
@@ -851,140 +947,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Goal Tracking - Large Bento Card */}
-            <div className="bento-card md:col-span-8 p-8 overflow-hidden relative group">
-              <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-                <Target size={200} />
-              </div>
-              <div className="relative z-10">
-                <span className="px-3 py-1 bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-wider rounded-full border border-blue-500/20">Annual Strategic Focus</span>
-                
-                <div className="mt-8 grid gap-8 sm:grid-cols-2">
-                  <div>
-                    <div className="group/metric cursor-pointer" onClick={(e) => {
-                      const input = e.currentTarget.querySelector('input[type="number"]');
-                      if (input instanceof HTMLInputElement) input.focus();
-                    }}>
-                      <div className="flex justify-between items-center mb-2">
-                        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-widest">💰 GSPC Performance</h2>
-                        <input 
-                          type="number"
-                          className="w-24 bg-slate-800/20 hover:bg-slate-800/40 text-right text-xs font-mono text-slate-400 outline-none border-b border-blue-500/30 px-2 py-1 rounded-t-lg transition-colors focus:border-blue-500"
-                          value={perfData.annualTargetGSPC}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => setPerfData(prev => ({ ...prev, annualTargetGSPC: parseFloat(e.target.value) || 0 }))}
-                        />
-                      </div>
-                      <div className="flex items-baseline gap-3">
-                        <input 
-                          type="number"
-                          className="text-5xl font-light text-white bg-transparent border-none outline-none w-full max-w-[220px] p-0 hover:text-blue-400 focus:text-blue-400 transition-colors cursor-text"
-                          value={perfData.personalQ}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => {
-                            const newVal = parseFloat(e.target.value) || 0;
-                            const currentMonthName = format(new Date(), 'M月', { locale: undefined }); // '4月'
-                            setPerfData(prev => {
-                              const newMonthly = prev.monthlyRecords.map(m => {
-                                if (m.month === currentMonthName) {
-                                  // Adjust this month so that the total becomes newVal
-                                  const otherMonthsSum = prev.monthlyRecords
-                                    .filter(om => om.month !== currentMonthName)
-                                    .reduce((sum, om) => sum + (om.actual || 0), 0);
-                                  return { ...m, actual: newVal - otherMonthsSum };
-                                }
-                                return m;
-                              });
-                              return { ...prev, monthlyRecords: newMonthly, personalQ: newVal };
-                            });
-                          }}
-                        />
-                        <div className="text-sm text-slate-500">/ {formatNumber(perfData.annualTargetGSPC)} QFYLP</div>
-                      </div>
-                      <div className="mt-6 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
-                          style={{ width: `${Math.min(100, (perfData.personalQ / (perfData.annualTargetGSPC || 1)) * 100)}%` }} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="group/metric cursor-pointer" onClick={(e) => {
-                      const input = e.currentTarget.querySelector('input[type="number"]');
-                      if (input instanceof HTMLInputElement) input.focus();
-                    }}>
-                      <div className="flex justify-between items-center mb-2">
-                        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-widest">👥 Team Recruitment</h2>
-                        <input 
-                          type="number"
-                          className="w-20 bg-slate-800/20 hover:bg-slate-800/40 text-right text-xs font-mono text-slate-400 outline-none border-b border-emerald-500/30 px-2 py-1 rounded-t-lg transition-colors focus:border-emerald-500"
-                          value={perfData.annualTargetTeam}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => setPerfData(prev => ({ ...prev, annualTargetTeam: parseInt(e.target.value) || 0 }))}
-                        />
-                      </div>
-                      <div className="flex items-baseline gap-3">
-                        <input 
-                          type="number"
-                          className="text-5xl font-light text-white bg-transparent border-none outline-none w-full max-w-[140px] p-0 hover:text-emerald-400 focus:text-emerald-400 transition-colors cursor-text"
-                          value={perfData.recruitCount}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => {
-                            const newVal = parseInt(e.target.value) || 0;
-                            const currentMonthName = format(new Date(), 'M月', { locale: undefined });
-                            setPerfData(prev => {
-                              const newMonthly = prev.monthlyRecords.map(m => {
-                                if (m.month === currentMonthName) {
-                                  const otherMonthsSum = prev.monthlyRecords
-                                    .filter(om => om.month !== currentMonthName)
-                                    .reduce((sum, om) => sum + (om.recruitActual || 0), 0);
-                                  return { ...m, recruitActual: newVal - otherMonthsSum };
-                                }
-                                return m;
-                              });
-                              return { ...prev, monthlyRecords: newMonthly, recruitCount: newVal };
-                            });
-                          }}
-                        />
-                        <div className="text-sm text-slate-500">/ {perfData.annualTargetTeam} Players</div>
-                      </div>
-                      <div className="mt-6 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
-                          style={{ width: `${Math.min(100, (perfData.recruitCount / (perfData.annualTargetTeam || 1)) * 100)}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* Wishing Statement (许愿文) moved and resized */}
-            <div className={cn(
-              "bento-card md:col-span-4 p-6 flex flex-col justify-between overflow-hidden relative transition-colors duration-300",
-              isDarkMode ? "bg-slate-900/40" : "bg-white border-slate-200 shadow-sm"
-            )}>
-              <div className="absolute -bottom-4 -right-4 opacity-10">
-                <Target size={100} className="text-amber-500" />
-              </div>
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">许愿文 · Manifestation</span>
-                <div className="p-1 bg-amber-500/10 text-amber-500 rounded-lg">
-                  <Target size={14} />
-                </div>
-              </div>
-              <textarea 
-                className={cn(
-                  "flex-1 w-full bg-transparent text-sm font-medium leading-relaxed italic border-none outline-none resize-none custom-scrollbar min-h-[100px]",
-                  isDarkMode ? "text-slate-100 placeholder:text-slate-700" : "text-slate-800 placeholder:text-slate-300"
-                )}
-                placeholder="在此写下您的许愿文，让宇宙能量为您加持..."
-                value={perfData.wishingStatement || ""}
-                onChange={(e) => setPerfData(prev => ({ ...prev, wishingStatement: e.target.value }))}
-              />
-            </div>
-
-            {/* Monthly Command Center (New Calendar Card) */}
+            {/* 4. Monthly Matrix Calendar */}
             <div className={cn(
               "bento-card md:col-span-4 p-6 flex flex-col transition-colors duration-300",
               isDarkMode ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200 shadow-sm"
@@ -1018,9 +981,8 @@ export default function App() {
                     const isTodayLocal = isToday(day);
                     const isCurrentMonth = isSameMonth(day, calendarMonth);
                     
-                    // Check if has events
                     const dayOfWeek = day.getDay();
-                    const adjustedWeekday = dayOfWeek === 0 ? 0 : dayOfWeek; // Adjust if needed, current system uses 0 for Sunday
+                    const adjustedWeekday = dayOfWeek === 0 ? 0 : dayOfWeek;
                     
                     const mondayBase = startOfWeek(baseDate, { weekStartsOn: 1 });
                     const mondayDay = startOfWeek(day, { weekStartsOn: 1 });
@@ -1053,13 +1015,11 @@ export default function App() {
                 })()}
               </div>
 
-              {/* Day Preview */}
-              <div className="mt-6 pt-6 border-t border-slate-800/50">
+              <div className="mt-6 pt-6 border-t border-slate-800/50 flex-1">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{format(selectedCalendarDay, 'EEEE, d MMM')}</span>
-                  <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-500/50" />
                 </div>
-                <div className="space-y-2 max-h-[100px] overflow-y-auto custom-scrollbar pr-1">
+                <div className="space-y-2 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
                   {(() => {
                     const dayOfWeek = selectedCalendarDay.getDay();
                     const adjustedWeekday = dayOfWeek === 0 ? 0 : dayOfWeek;
@@ -1070,7 +1030,7 @@ export default function App() {
                     const dayEvents = events.filter(e => e.weekday === adjustedWeekday && e.weekOffset === diffWeeks)
                       .sort((a, b) => a.startHour - b.startHour);
 
-                    if (dayEvents.length === 0) return <p className="text-[9px] italic text-slate-600">No tactical deployments scheduled.</p>;
+                    if (dayEvents.length === 0) return <p className="text-[9px] italic text-slate-600">No tactical deployments.</p>;
                     
                     return dayEvents.map(e => {
                       const act = ACTIVITIES.find(a => a.id === e.activityId);
@@ -1079,8 +1039,8 @@ export default function App() {
                         <div key={e.id} className="flex items-center gap-3 p-2 rounded-xl bg-slate-800/10 border border-slate-800/20">
                           <div className="w-1 h-4 rounded-full" style={{ backgroundColor: groupColor }} />
                           <div className="flex-1">
-                            <div className="flex justify-between text-[9px] font-bold text-white tracking-widest">
-                              <span>{e.title}</span>
+                            <div className="flex justify-between text-[8px] font-bold text-slate-200 tracking-widest">
+                              <span className="truncate">{e.title}</span>
                               <span className="font-mono text-slate-500">{e.startHour}:00</span>
                             </div>
                           </div>
@@ -1092,24 +1052,118 @@ export default function App() {
               </div>
             </div>
 
-            {/* Encouragement Card (Inspiration Node) */}
-            <div 
-              onClick={() => setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)])}
-              className={cn(
-                "bento-card md:col-span-8 p-6 flex flex-col justify-between cursor-pointer transition-all duration-300 group",
-                isDarkMode ? "hover:bg-slate-800/30" : "bg-white border-slate-200 hover:bg-slate-50 shadow-sm"
-              )}
-            >
-              <div className="flex justify-between items-start">
-                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Inspiration Node</span>
-                <RefreshCw size={14} className="text-slate-500 group-hover:rotate-180 transition-transform duration-500" />
+            {/* 5. Goal Tracking / Performance Summary */}
+            <div className={cn(
+              "bento-card md:col-span-12 p-10 overflow-hidden relative group",
+              isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+            )}>
+              <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                <Target size={240} />
               </div>
-              <div className="mt-4">
-                <p className={cn(
-                  "text-xl font-medium leading-relaxed italic transition-colors",
-                  isDarkMode ? "text-slate-100 group-hover:text-white" : "text-slate-800 group-hover:text-blue-600"
-                )}>"{encouragement || 'Preparing insight...'}"</p>
-                <p className="text-[10px] text-slate-500 mt-4 uppercase font-mono">Status: {isFocusMode ? 'Matrix Resonance High' : 'Awaiting Operations'}</p>
+              <div className="relative z-10">
+                <span className="px-3 py-1 bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-wider rounded-full border border-blue-500/20">Annual Strategic Focus</span>
+                
+                <div className="mt-8 grid gap-12 lg:grid-cols-2">
+                  <div>
+                    <div className="group/metric cursor-pointer" onClick={(e) => {
+                      const input = e.currentTarget.querySelector('input[type="number"]');
+                      if (input instanceof HTMLInputElement) input.focus();
+                    }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-widest">💰 GSPC Performance</h2>
+                        <input 
+                          type="number"
+                          className="w-24 bg-slate-800/20 hover:bg-slate-800/40 text-right text-xs font-mono text-slate-400 outline-none border-b border-blue-500/30 px-2 py-1 rounded-t-lg transition-colors focus:border-blue-500"
+                          value={perfData.annualTargetGSPC}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => setPerfData(prev => ({ ...prev, annualTargetGSPC: parseFloat(e.target.value) || 0 }))}
+                        />
+                      </div>
+                      <div className="flex items-baseline gap-3">
+                        <input 
+                          type="number"
+                          className={cn(
+                            "text-6xl font-light bg-transparent border-none outline-none w-full max-w-[300px] p-0 hover:text-blue-400 focus:text-blue-400 transition-colors cursor-text",
+                            isDarkMode ? "text-white" : "text-slate-900"
+                          )}
+                          value={perfData.personalQ}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const newVal = parseFloat(e.target.value) || 0;
+                            const currentMonthName = format(new Date(), 'M月');
+                            setPerfData(prev => {
+                              const newMonthly = prev.monthlyRecords.map(m => {
+                                if (m.month === currentMonthName) {
+                                  const otherMonthsSum = prev.monthlyRecords
+                                    .filter(om => om.month !== currentMonthName)
+                                    .reduce((sum, om) => sum + (om.actual || 0), 0);
+                                  return { ...m, actual: newVal - otherMonthsSum };
+                                }
+                                return m;
+                              });
+                              return { ...prev, monthlyRecords: newMonthly, personalQ: newVal };
+                            });
+                          }}
+                        />
+                        <div className="text-sm text-slate-500">/ {formatNumber(perfData.annualTargetGSPC)} QFYLP</div>
+                      </div>
+                      <div className="mt-8 h-1.5 w-full bg-slate-800/40 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 transition-all duration-1000 shadow-[0_0_15px_rgba(59,130,246,0.5)]" 
+                          style={{ width: `${Math.min(100, (perfData.personalQ / (perfData.annualTargetGSPC || 1)) * 100)}%` }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="group/metric cursor-pointer" onClick={(e) => {
+                      const input = e.currentTarget.querySelector('input[type="number"]');
+                      if (input instanceof HTMLInputElement) input.focus();
+                    }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-widest">👥 Team Recruitment</h2>
+                        <input 
+                          type="number"
+                          className="w-20 bg-slate-800/20 hover:bg-slate-800/40 text-right text-xs font-mono text-slate-400 outline-none border-b border-emerald-500/30 px-2 py-1 rounded-t-lg transition-colors focus:border-emerald-500"
+                          value={perfData.annualTargetTeam}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => setPerfData(prev => ({ ...prev, annualTargetTeam: parseInt(e.target.value) || 0 }))}
+                        />
+                      </div>
+                      <div className="flex items-baseline gap-3">
+                        <input 
+                          type="number"
+                          className={cn(
+                            "text-6xl font-light bg-transparent border-none outline-none w-full max-w-[200px] p-0 hover:text-emerald-400 focus:text-emerald-400 transition-colors cursor-text",
+                            isDarkMode ? "text-white" : "text-slate-900"
+                          )}
+                          value={perfData.recruitCount}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const newVal = parseInt(e.target.value) || 0;
+                            const currentMonthName = format(new Date(), 'M月');
+                            setPerfData(prev => {
+                              const newMonthly = prev.monthlyRecords.map(m => {
+                                if (m.month === currentMonthName) {
+                                  const otherMonthsSum = prev.monthlyRecords
+                                    .filter(om => om.month !== currentMonthName)
+                                    .reduce((sum, om) => sum + (om.recruitActual || 0), 0);
+                                  return { ...m, recruitActual: newVal - otherMonthsSum };
+                                }
+                                return m;
+                              });
+                              return { ...prev, monthlyRecords: newMonthly, recruitCount: newVal };
+                            });
+                          }}
+                        />
+                        <div className="text-sm text-slate-500">/ {perfData.annualTargetTeam} Players</div>
+                      </div>
+                      <div className="mt-8 h-1.5 w-full bg-slate-800/40 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 transition-all duration-1000 shadow-[0_0_15px_rgba(16,185,129,0.5)]" 
+                          style={{ width: `${Math.min(100, (perfData.recruitCount / (perfData.annualTargetTeam || 1)) * 100)}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1583,28 +1637,57 @@ export default function App() {
                           </span>
                         </div>
                         
-                        <div className="grid md:grid-cols-2 gap-6">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                           <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                              <Edit3 size={12} /> Tactical Reflection
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-blue-500 uppercase tracking-widest">
+                              <Target size={12} /> 3v6R Performance
                             </div>
                             <div className={cn(
-                              "p-4 rounded-2xl text-sm leading-relaxed italic border min-h-[60px]",
-                              isDarkMode ? "bg-black/20 border-slate-800 text-slate-300" : "bg-white border-slate-200 text-slate-700 shadow-sm"
+                              "p-4 rounded-2xl border grid grid-cols-2 gap-2",
+                              isDarkMode ? "bg-black/20 border-slate-800" : "bg-white border-slate-200 shadow-sm"
                             )}>
-                              {(data as DailyData).r || "No reflection recorded for this cycle."}
+                              {(() => {
+                                const log = perfData.dailyActivitiesLog?.[date] || { of: 0, p: 0, f: 0, c: 0, q: 0 };
+                                return (
+                                  <>
+                                    <div className="text-[10px] text-slate-500">Sales: <span className="text-blue-400 font-bold">{log.of+log.p+log.f+log.c}</span></div>
+                                    <div className="text-[10px] text-slate-500">QFYLP: <span className="text-yellow-500 font-bold">{formatNumber(log.q || 0)}</span></div>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
-                          
+
                           <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                              <Award size={12} /> Gratitude Synthesis
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-500 uppercase tracking-widest">
+                              <Zap size={12} /> Elite Protocol
                             </div>
                             <div className={cn(
-                              "p-4 rounded-2xl text-sm leading-relaxed italic border min-h-[60px]",
+                              "p-4 rounded-2xl border text-[10px] space-y-1",
+                              isDarkMode ? "bg-black/20 border-slate-800 text-slate-400" : "bg-white border-slate-200 text-slate-600 shadow-sm"
+                            )}>
+                              {(() => {
+                                const details = (data as DailyData).protocolDetails || {};
+                                const filled = Object.entries(details).filter(([, list]) => list.some(d => d.trim()));
+                                if (filled.length === 0) return <div className="italic text-slate-600 underline">No protocol details logged.</div>;
+                                return filled.map(([id, list]) => (
+                                  <div key={id} className="break-words">
+                                    • <span className="font-bold text-slate-500">{id.toUpperCase()}:</span> {list.filter(l => l.trim()).join(', ')}
+                                  </div>
+                                ));
+                              })()}
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                              <Edit3 size={12} /> Reflection
+                            </div>
+                            <div className={cn(
+                              "p-4 rounded-2xl text-[10px] leading-relaxed italic border min-h-[50px]",
                               isDarkMode ? "bg-black/20 border-slate-800 text-slate-300" : "bg-white border-slate-200 text-slate-700 shadow-sm"
                             )}>
-                              {(data as DailyData).g || "No gratitude recorded for this cycle."}
+                              {(data as DailyData).r || "No reflection recorded."}
                             </div>
                           </div>
                         </div>
