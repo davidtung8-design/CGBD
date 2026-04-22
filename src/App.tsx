@@ -25,12 +25,6 @@ import { ListPage } from './pages/ListPage';
 import { ActionPage3v6R } from './pages/ActionPage3v6R';
 import { SettingsPage } from './pages/SettingsPage';
 import { AwardsPage } from './pages/AwardsPage';
-import { auth, db, signInWithGoogle, testConnection } from './lib/firebase';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { 
-  collection, doc, onSnapshot, setDoc, getDoc, 
-  query, where, deleteDoc, writeBatch 
-} from 'firebase/firestore';
 
 // --- Default States ---
 const DEFAULT_MONTHLY: MonthlyRecord[] = [
