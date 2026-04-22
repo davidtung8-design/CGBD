@@ -110,23 +110,25 @@ export const Header: React.FC<HeaderProps> = ({
                </div>
              </div>
            ) : (
-             <div className="flex items-center gap-1 mr-2 relative z-[999]">
+             <div className="flex items-center gap-1 mr-2 relative z-[9999]">
                <button 
                  onClick={(e) => {
-                   console.log("Login button clicked");
+                   e.preventDefault();
+                   e.stopPropagation();
+                   alert("Debug: 检测到点击，正在启动登录流程...");
                    onSignIn();
                  }}
-                 className="flex items-center gap-2 px-4 h-12 rounded-2xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 active:scale-95 transition-all shadow-lg shadow-blue-900/40 cursor-pointer"
+                 className="flex items-center gap-2 px-5 h-14 rounded-2xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 active:scale-90 active:bg-blue-700 transition-all shadow-xl shadow-blue-900/40 cursor-pointer border-2 border-white/20"
+                 style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                >
-                 <LogIn size={16} />
+                 <LogIn size={18} />
                  <span>Login Sync</span>
                </button>
                <button 
                  onClick={() => setShowHelp(!showHelp)}
-                 className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center border border-slate-700 hover:text-blue-400 active:scale-95 transition-all cursor-pointer"
-                 title="登录报错点这里"
+                 className="w-14 h-14 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center border border-slate-700 hover:text-blue-400 active:scale-90 transition-all cursor-pointer"
                >
-                 <HelpCircle size={20} />
+                 <HelpCircle size={24} />
                </button>
              </div>
            )}
