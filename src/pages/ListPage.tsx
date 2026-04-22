@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { PerfData } from '../types';
-import { UserPlus, Target, Upload, Search, Plus, Trash2, Star, Database, Filter, ChevronRight } from 'lucide-react';
+import { UserPlus, Target, Upload, Search, Plus, Trash2, Star, Database, Filter, ChevronRight, ClipboardPaste, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -17,8 +17,51 @@ export const ListPage: React.FC<ListPageProps> = ({ perfData, setPerfData, isDar
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'prospect' | 'recruit'>('prospect');
   const [showOnlyPinned, setShowOnlyPinned] = useState(false);
+  const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
+  const [pasteValue, setPasteValue] = useState('');
 
   // --- Handlers ---
+  const handlePasteSync = () => {
+    if (!pasteValue.trim()) return;
+    
+    const lines = pasteValue.split(/\r?\n/).filter(l => l.trim());
+    const newItems = lines.map(line => {
+      // Split by common separators: tab, comma, semicolon, pipe
+      const parts = line.split(/[\t,;|]/).map(p => p.trim());
+      let name = parts[0];
+      let note = parts.slice(1).join(' ');
+      
+      if (parts.length === 1) {
+        const spaceIdx = line.lastIndexOf(' ');
+        if (spaceIdx > 0 && /\d/.test(line.substring(spaceIdx))) {
+          name = line.substring(0, spaceIdx).trim();
+          note = line.substring(spaceIdx).trim();
+        }
+      }
+
+      return {
+        name: name || 'Pasted Node',
+        job: '',
+        isPinned: false,
+        ...(activeTab === 'prospect' 
+          ? { plan: '', note: note } 
+          : { interest: '0', followup: note })
+      };
+    });
+
+    setPerfData(prev => ({
+      ...prev,
+      [activeTab === 'prospect' ? 'prospectList' : 'recruitList']: [
+        ...prev[activeTab === 'prospect' ? 'prospectList' : 'recruitList'],
+        ...newItems
+      ]
+    }));
+    
+    setPasteValue('');
+    setIsPasteModalOpen(false);
+    alert(`成功同步：已通过粘贴方式导入 ${newItems.length} 个联系人。`);
+  };
+
   const handleImportVCF = (type: 'prospect' | 'recruit', e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -153,17 +196,29 @@ export const ListPage: React.FC<ListPageProps> = ({ perfData, setPerfData, isDar
       const content = event.target?.result as string;
       if (!content) return;
 
-      const rows = content.split('\n').filter(row => row.trim());
-      const importedData = rows.map(row => row.split(',').map(cell => cell.trim().replace(/^["']|["']$/g, '')));
+      // Better CSV handling to avoid empty results on simple formats
+      const rows = content.split(/\r?\n/).filter(row => row.trim());
+      const newEntries = rows.map(row => {
+        // Try multiple separators
+        let item: string[] = [];
+        if (row.includes(',')) item = row.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+        else if (row.includes('\t')) item = row.split('\t').map(c => c.trim());
+        else item = [row.trim()];
 
-      const newEntries = importedData.map(item => ({
-        name: item[0] || '',
-        job: item[1] || '',
-        isPinned: false,
-        ...(type === 'prospect' 
-          ? { plan: item[2] || '', note: item[3] || '' } 
-          : { interest: item[2] || '0', followup: item[3] || '' })
-      })).filter(x => x.name);
+        return {
+          name: item[0] || '',
+          job: item[1] || '',
+          isPinned: false,
+          ...(type === 'prospect' 
+            ? { plan: item[2] || '', note: item[3] || '' } 
+            : { interest: item[2] || '0', followup: item[3] || '' })
+        };
+      }).filter(x => x.name);
+
+      if (newEntries.length === 0) {
+        alert('导入失败：未在文件中找到有效数据，请检查 CSV 格式。');
+        return;
+      }
 
       setPerfData(prev => ({
         ...prev,
@@ -172,8 +227,10 @@ export const ListPage: React.FC<ListPageProps> = ({ perfData, setPerfData, isDar
           ...newEntries
         ]
       }));
+      alert(`CSV 导入成功：已同步 ${newEntries.length} 条记录。`);
       if (e.target) e.target.value = '';
     };
+    reader.onerror = () => alert('读取文件失败，请重试。');
     reader.readAsText(file);
   };
 
@@ -387,6 +444,15 @@ export const ListPage: React.FC<ListPageProps> = ({ perfData, setPerfData, isDar
           
           <div className="flex items-center gap-3">
             <button 
+              onClick={() => setIsPasteModalOpen(true)}
+              className={cn(
+                "flex items-center gap-2 px-5 py-3 rounded-2xl border text-[10px] font-bold uppercase tracking-widest transition-all",
+                isDarkMode ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-white" : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+              )}
+            >
+              <ClipboardPaste size={14} /> Paste Matrix
+            </button>
+            <button 
               onClick={() => handleImportContacts(activeTab)}
               className={cn(
                 "flex items-center gap-2 px-5 py-3 rounded-2xl border text-[10px] font-bold uppercase tracking-widest transition-all",
@@ -406,6 +472,61 @@ export const ListPage: React.FC<ListPageProps> = ({ perfData, setPerfData, isDar
             </button>
           </div>
         </div>
+
+        {/* Paste Modal */}
+        <AnimatePresence>
+          {isPasteModalOpen && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm bg-black/20">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className={cn(
+                  "w-full max-w-xl p-8 rounded-[2rem] shadow-2xl space-y-6 border",
+                  isDarkMode ? "bg-slate-950 border-slate-800" : "bg-white border-slate-200"
+                )}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-black uppercase tracking-widest">Paste Matrix Sync</h3>
+                    <p className="text-[10px] text-slate-500 uppercase mt-1">直接从备忘录或微信粘贴名字和电话</p>
+                  </div>
+                  <button onClick={() => setIsPasteModalOpen(false)} className="p-2 hover:bg-slate-800/10 rounded-full transition-colors">
+                    <X size={20} className="text-slate-500" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-[10px] text-slate-400 italic">格式举例：<br/>张三 13812345678<br/>李四 012-3456789</p>
+                  <textarea 
+                    className={cn(
+                      "w-full h-64 p-6 rounded-3xl border outline-none font-mono text-sm resize-none custom-scrollbar transition-all",
+                      isDarkMode ? "bg-slate-900 border-slate-800 focus:border-blue-500" : "bg-slate-50 border-slate-200 focus:border-blue-500"
+                    )}
+                    placeholder="在此处粘贴您的联系人列表..."
+                    value={pasteValue}
+                    onChange={(e) => setPasteValue(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsPasteModalOpen(false)}
+                    className="flex-1 py-4 rounded-2xl font-bold text-[10px] uppercase tracking-widest border border-slate-800/20 text-slate-500 hover:bg-slate-800/10"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handlePasteSync}
+                    className="flex-1 py-4 bg-blue-500 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
+                  >
+                    Sync Pinned Nodes
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         <div className="overflow-x-auto custom-scrollbar overflow-y-auto max-h-[70vh]">
           <table className="w-full text-left text-[11px]">
