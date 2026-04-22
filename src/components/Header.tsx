@@ -64,8 +64,8 @@ export const Header: React.FC<HeaderProps> = ({
             {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className="text-slate-500 group-hover:text-blue-400" />}
           </div>
           <ol className="text-[9px] text-slate-400 space-y-2 list-decimal ml-3">
-            <li>进入 Firebase Console -> Build -> Authentication。</li>
-            <li>点击 <strong>Settings</strong> -> <strong>Authorized domains</strong>。</li>
+            <li>进入 Firebase Console &rarr; Build &rarr; Authentication。</li>
+            <li>点击 <strong>Settings</strong> &rarr; <strong>Authorized domains</strong>。</li>
             <li>点击 <strong>Add domain</strong> 并粘贴上方域名。</li>
             <li>确保 <strong>Sign-in method</strong> 中的 Google 已开启。</li>
           </ol>
@@ -110,23 +110,27 @@ export const Header: React.FC<HeaderProps> = ({
                </div>
              </div>
            ) : (
-             <div className="flex items-center gap-1 mr-2 relative z-[9999]">
+             <div className="flex items-center gap-1 mr-2 relative z-[9999]" onClick={(e) => e.stopPropagation()}>
                <button 
                  onClick={(e) => {
                    e.preventDefault();
                    e.stopPropagation();
-                   alert("Debug: 检测到点击，正在启动登录流程...");
+                   console.log("Login sequence triggered");
                    onSignIn();
                  }}
-                 className="flex items-center gap-2 px-5 h-14 rounded-2xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 active:scale-90 active:bg-blue-700 transition-all shadow-xl shadow-blue-900/40 cursor-pointer border-2 border-white/20"
+                 className="flex items-center gap-2 px-6 h-14 rounded-2xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 active:scale-95 active:bg-blue-700 transition-all shadow-xl shadow-blue-900/40 cursor-pointer border-2 border-white/20 select-none"
                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                >
-                 <LogIn size={18} />
+                 <LogIn size={20} />
                  <span>Login Sync</span>
                </button>
                <button 
-                 onClick={() => setShowHelp(!showHelp)}
-                 className="w-14 h-14 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center border border-slate-700 hover:text-blue-400 active:scale-90 transition-all cursor-pointer"
+                 onClick={(e) => {
+                   e.preventDefault();
+                   e.stopPropagation();
+                   setShowHelp(!showHelp);
+                 }}
+                 className="w-14 h-14 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center border border-slate-700 hover:text-blue-400 active:scale-95 transition-all cursor-pointer select-none"
                >
                  <HelpCircle size={24} />
                </button>
