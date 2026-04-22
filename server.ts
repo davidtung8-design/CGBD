@@ -78,13 +78,24 @@ async function startServer() {
     res.send(data.content);
   });
 
-  // Vite middleware for ALL environments to ensure dynamic serving
-  console.log('Using Vite middleware for all requests...');
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: 'spa',
-  });
-  app.use(vite.middlewares);
+  // Fallback: Serve static files from dist if they exist, otherwise use Vite
+  if (fs.existsSync(distPath)) {
+    console.log('Serving from static dist folder...');
+    app.use(express.static(distPath));
+    // SPA Fallback: ALL routes that don't match static files get index.html
+    app.get('*', (req, res, next) => {
+      // Skip API routes
+      if (req.path.startsWith('/api/')) return next();
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  } else {
+    console.log('Dist folder not found, falling back to Vite middleware...');
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  }
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${PORT}`);
