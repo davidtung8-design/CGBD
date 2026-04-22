@@ -25,6 +25,12 @@ import { ListPage } from './pages/ListPage';
 import { ActionPage3v6R } from './pages/ActionPage3v6R';
 import { SettingsPage } from './pages/SettingsPage';
 import { AwardsPage } from './pages/AwardsPage';
+import { auth, db, signInWithGoogle, testConnection } from './lib/firebase';
+import { onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { 
+  collection, doc, onSnapshot, setDoc, getDoc, 
+  query, where, deleteDoc, writeBatch 
+} from 'firebase/firestore';
 
 // --- Default States ---
 const DEFAULT_MONTHLY: MonthlyRecord[] = [
@@ -89,6 +95,8 @@ export default function App() {
   const [baseDate, setBaseDate] = useState(new Date());
 
   // --- UI States ---
+  const [user, setUser] = useState<User | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ day: number, hour: number, offset: number } | null>(null);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -132,6 +140,16 @@ export default function App() {
 
   // --- Load Data ---
   useEffect(() => {
+    testConnection();
+    
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (!u) {
+        // Clear states if logged out? Or keep local?
+        // For now, let's keep local but stop syncing
+      }
+    });
+
     const savedDarkMode = localStorage.getItem('dt_dark_mode');
     if (savedDarkMode !== null) setIsDarkMode(savedDarkMode === 'true');
 
@@ -157,20 +175,97 @@ export default function App() {
     if (savedSound) setAmbientSound(savedSound === 'true');
 
     setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
+
+    return () => unsubscribeAuth();
   }, []);
+
+  // --- Cloud Sync ---
+  useEffect(() => {
+    if (!user) return;
+
+    setIsSyncing(true);
+    const userDocRef = doc(db, 'users', user.uid);
+
+    // Sync Perf Data
+    const unsubPerf = onSnapshot(userDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const cloudData = snapshot.data() as PerfData;
+        setPerfData(prev => ({ ...prev, ...cloudData }));
+      } else {
+        // First login? Upload local data
+        const localPerf = localStorage.getItem('dt_perf');
+        if (localPerf) {
+          setDoc(userDocRef, JSON.parse(localPerf), { merge: true });
+        }
+      }
+      setIsSyncing(false);
+    });
+
+    // Sync Events
+    const eventsColRef = collection(db, 'users', user.uid, 'events');
+    const unsubEvents = onSnapshot(eventsColRef, (snapshot) => {
+      const cloudEvents: CalendarEvent[] = [];
+      snapshot.forEach(doc => cloudEvents.push(doc.data() as CalendarEvent));
+      if (cloudEvents.length > 0) setEvents(cloudEvents);
+      else {
+        // Upload local events if cloud is empty
+        const localEvents = localStorage.getItem('dt_events');
+        if (localEvents) {
+          const eventsArr = JSON.parse(localEvents) as CalendarEvent[];
+          eventsArr.forEach(e => setDoc(doc(db, 'users', user.uid, 'events', e.id), e));
+        }
+      }
+    });
+
+    // Sync Todos
+    const todosColRef = collection(db, 'users', user.uid, 'todos');
+    const unsubTodos = onSnapshot(todosColRef, (snapshot) => {
+      const cloudTodos: Record<string, TodoItem[]> = {};
+      snapshot.forEach(doc => cloudTodos[doc.id] = (doc.data() as any).items);
+      if (Object.keys(cloudTodos).length > 0) setTodoItems(cloudTodos);
+    });
+
+    // Sync Daily
+    const dailyColRef = collection(db, 'users', user.uid, 'daily');
+    const unsubDaily = onSnapshot(dailyColRef, (snapshot) => {
+      const cloudDaily: Record<string, DailyData> = {};
+      snapshot.forEach(doc => cloudDaily[doc.id] = doc.data() as DailyData);
+      if (Object.keys(cloudDaily).length > 0) setDailyData(cloudDaily);
+    });
+
+    return () => {
+      unsubPerf();
+      unsubEvents();
+      unsubTodos();
+      unsubDaily();
+    };
+  }, [user]);
 
   // --- Save Data ---
   useEffect(() => {
     localStorage.setItem('dt_events', JSON.stringify(events));
+    if (user) {
+      // Sync events is handled individually usually to avoid massive writes
+      // but for simplicity here we just ensure local matches
+    }
   }, [events]);
 
   useEffect(() => {
     localStorage.setItem('dt_perf', JSON.stringify(perfData));
-  }, [perfData]);
+    if (user) {
+      setDoc(doc(db, 'users', user.uid), perfData, { merge: true });
+    }
+  }, [perfData, user]);
 
   useEffect(() => {
     localStorage.setItem('dt_todos', JSON.stringify(todoItems));
-  }, [todoItems]);
+    if (user) {
+      // Update each date that changed
+      Object.entries(todoItems).forEach(([date, items]) => {
+        setDoc(doc(db, 'users', user.uid, 'todos', date), { items });
+      });
+    }
+  }, [todoItems, user]);
 
   useEffect(() => {
     localStorage.setItem('dt_dark_mode', isDarkMode.toString());
@@ -195,7 +290,12 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('dt_daily', JSON.stringify(dailyData));
-  }, [dailyData]);
+    if (user) {
+      Object.entries(dailyData).forEach(([date, data]) => {
+        setDoc(doc(db, 'users', user.uid, 'daily', date), data);
+      });
+    }
+  }, [dailyData, user]);
 
   useEffect(() => {
     localStorage.setItem('dt_theme', themeKey);
@@ -536,6 +636,7 @@ export default function App() {
       )}>
         <Header 
           theme={theme}
+          user={user}
           onOpenCalendar={() => setIsCalendarOpen(true)}
           onQuickAdd={() => {
             setSelectedSlot({ day: new Date().getDay(), hour: 9, offset: 0 });
@@ -547,6 +648,8 @@ export default function App() {
           onExportAll={() => {}}
           onSyncGoogle={() => {}}
           onExportReport={handleExportReport}
+          onSignIn={signInWithGoogle}
+          onSignOut={() => signOut(auth)}
         />
 
         {currentPage === 'home' && (

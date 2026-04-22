@@ -1,11 +1,13 @@
 import React from 'react';
 import { DTIcon } from './DTIcon';
 import { ThemeConfig } from '../types';
-import { Calendar, Zap, Download, Upload, RefreshCw, Send, FileText, Mail } from 'lucide-react';
+import { Calendar, Zap, Download, Upload, RefreshCw, Send, FileText, Mail, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { User } from 'firebase/auth';
 
 interface HeaderProps {
   theme: ThemeConfig;
+  user: User | null;
   onOpenCalendar: () => void;
   onQuickAdd: () => void;
   onExport: () => void;
@@ -14,10 +16,13 @@ interface HeaderProps {
   onExportAll: () => void;
   onSyncGoogle: () => void;
   onExportReport: () => void;
+  onSignIn: () => void;
+  onSignOut: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   theme,
+  user,
   onOpenCalendar,
   onQuickAdd,
   onExport,
@@ -25,7 +30,9 @@ export const Header: React.FC<HeaderProps> = ({
   onSyncIcal,
   onExportAll,
   onSyncGoogle,
-  onExportReport
+  onExportReport,
+  onSignIn,
+  onSignOut
 }) => {
   const currentDate = new Date();
   
@@ -48,6 +55,30 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
+           {user ? (
+             <div className="flex items-center gap-2 mr-2 bg-slate-800/40 p-1 pr-3 rounded-2xl border border-slate-700">
+               {user.photoURL ? (
+                 <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-xl border border-slate-700" referrerPolicy="no-referrer" />
+               ) : (
+                 <div className="w-8 h-8 rounded-xl bg-slate-700 flex items-center justify-center text-slate-400">
+                   <UserIcon size={16} />
+                 </div>
+               )}
+               <div className="flex flex-col">
+                 <span className="text-[10px] text-slate-300 font-bold truncate max-w-[80px]">{user.displayName || 'Agent'}</span>
+                 <button onClick={onSignOut} className="text-[8px] text-blue-400 hover:text-blue-300 uppercase tracking-tighter text-left">Logout</button>
+               </div>
+             </div>
+           ) : (
+             <button 
+               onClick={onSignIn}
+               className="flex items-center gap-2 px-4 h-10 rounded-2xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-500 transition-all shadow-lg shadow-blue-900/40 mr-2"
+             >
+               <LogIn size={14} />
+               <span>Login Sync</span>
+             </button>
+           )}
+
            <button 
              onClick={onSyncIcal}
              className="w-10 h-10 rounded-2xl bg-blue-600/20 text-blue-500 flex items-center justify-center border border-blue-500/20 hover:bg-blue-600 hover:text-white transition-all shadow-lg shadow-blue-900/20 group"
