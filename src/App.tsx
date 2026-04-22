@@ -20,7 +20,6 @@ import {
 } from 'date-fns';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth } from './lib/firebase';
 import { PerformancePage } from './pages/PerformancePage';
 import { ListPage } from './pages/ListPage';
 import { ActionPage3v6R } from './pages/ActionPage3v6R';
@@ -140,29 +139,33 @@ export default function App() {
 
   // --- Load Data ---
   useEffect(() => {
-    const savedDarkMode = localStorage.getItem('dt_dark_mode');
-    if (savedDarkMode !== null) setIsDarkMode(savedDarkMode === 'true');
+    try {
+      const savedDarkMode = localStorage.getItem('dt_dark_mode');
+      if (savedDarkMode !== null) setIsDarkMode(savedDarkMode === 'true');
 
-    const savedEvents = localStorage.getItem('dt_events');
-    if (savedEvents) setEvents(JSON.parse(savedEvents));
+      const savedEvents = localStorage.getItem('dt_events');
+      if (savedEvents) setEvents(JSON.parse(savedEvents));
 
-    const savedPerf = localStorage.getItem('dt_perf');
-    if (savedPerf) setPerfData(JSON.parse(savedPerf));
+      const savedPerf = localStorage.getItem('dt_perf');
+      if (savedPerf) setPerfData(JSON.parse(savedPerf));
 
-    const savedTodos = localStorage.getItem('dt_todos');
-    if (savedTodos) setTodoItems(JSON.parse(savedTodos));
+      const savedTodos = localStorage.getItem('dt_todos');
+      if (savedTodos) setTodoItems(JSON.parse(savedTodos));
 
-    const savedDaily = localStorage.getItem('dt_daily');
-    if (savedDaily) setDailyData(JSON.parse(savedDaily));
+      const savedDaily = localStorage.getItem('dt_daily');
+      if (savedDaily) setDailyData(JSON.parse(savedDaily));
 
-    const savedTheme = localStorage.getItem('dt_theme') as ThemeKey;
-    if (savedTheme) setThemeKey(savedTheme);
+      const savedTheme = localStorage.getItem('dt_theme') as ThemeKey;
+      if (savedTheme) setThemeKey(savedTheme);
 
-    const savedFocus = localStorage.getItem('dt_focus');
-    if (savedFocus) setIsFocusMode(savedFocus === 'true');
+      const savedFocus = localStorage.getItem('dt_focus');
+      if (savedFocus) setIsFocusMode(savedFocus === 'true');
 
-    const savedSound = localStorage.getItem('dt_sound');
-    if (savedSound) setAmbientSound(savedSound === 'true');
+      const savedSound = localStorage.getItem('dt_sound');
+      if (savedSound) setAmbientSound(savedSound === 'true');
+    } catch (e) {
+      console.error("Local Storage Load Failed - Data may be corrupted", e);
+    }
 
     setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
     
