@@ -16,12 +16,14 @@ interface SettingsPageProps {
   ambientSound: boolean;
   setAmbientSound: (val: boolean) => void;
   onClearData: () => void;
+  userEmail: string;
+  onSignOut: () => void;
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({ 
   themeKey, setThemeKey, isDarkMode, setIsDarkMode, 
   isFocusMode, setIsFocusMode, ambientSound, setAmbientSound,
-  onClearData 
+  onClearData, userEmail, onSignOut 
 }) => {
   return (
     <div className="animate-fadeIn space-y-6">
@@ -38,11 +40,20 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
              </div>
           </div>
           
-          <h2 className="text-3xl font-bold tracking-tight text-white">时间管理大师</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-white">{userEmail || '时间管理大师'}</h2>
           <div className="mt-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-bold text-blue-400 uppercase tracking-widest">
-            Elite Strategist & Performance Mentor
+            {userEmail ? 'Verified Matrix Strategist' : 'Elite Strategist & Performance Mentor'}
           </div>
           
+          {userEmail && (
+            <button 
+              onClick={onSignOut}
+              className="mt-6 px-6 py-2 bg-slate-800 hover:bg-red-600/20 hover:text-red-500 text-slate-400 text-[10px] font-bold uppercase tracking-widest rounded-2xl border border-slate-700 transition-all"
+            >
+              Terminate Session (Sign Out)
+            </button>
+          )}
+
           <p className="mt-6 text-sm text-slate-500 italic font-medium max-w-md">
             "Success attracts success. Operational excellence is not an act, but a habit of the super-transcendent manager."
           </p>

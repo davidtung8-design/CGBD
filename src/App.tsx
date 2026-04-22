@@ -20,13 +20,14 @@ import {
 } from 'date-fns';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, signInWithGoogle } from './lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './lib/firebase';
 import { PerformancePage } from './pages/PerformancePage';
 import { ListPage } from './pages/ListPage';
 import { ActionPage3v6R } from './pages/ActionPage3v6R';
 import { SettingsPage } from './pages/SettingsPage';
 import { AwardsPage } from './pages/AwardsPage';
+import { supabase, signOut } from './lib/supabase';
+import { AuthModal } from './components/AuthModal';
 
 // --- Default States ---
 const DEFAULT_MONTHLY: MonthlyRecord[] = [
@@ -105,6 +106,7 @@ export default function App() {
   const [isReflectionArchiveOpen, setIsReflectionArchiveOpen] = useState(false);
   const [ambientSound, setAmbientSound] = useState(false);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const showToast = useCallback((message: string) => {
     setToast({ message, visible: true });
@@ -164,8 +166,20 @@ export default function App() {
 
     setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
     
-    // Listen for Firebase Auth changes to auto-sync with email ID
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    // Listen for Supabase Auth changes to auto-sync with email ID
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user;
+      if (user && user.email) {
+        setSyncId(user.email);
+        localStorage.setItem('dt_sync_id', user.email);
+        loadFromCloud(user.email);
+        setIsAuthModalOpen(false);
+      }
+    });
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const user = session?.user;
       if (user && user.email) {
         setSyncId(user.email);
         localStorage.setItem('dt_sync_id', user.email);
@@ -178,7 +192,9 @@ export default function App() {
       loadFromCloud(syncId);
     }
 
-    return () => unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadFromCloud = async (id: string) => {
@@ -575,6 +591,18 @@ export default function App() {
         fontFamily: '-apple-system, sans-serif' 
       } as React.CSSProperties}>
       
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={(email) => {
+          setSyncId(email);
+          localStorage.setItem('dt_sync_id', email);
+          loadFromCloud(email);
+          setIsAuthModalOpen(false);
+          showToast(`Linked: ${email}`);
+        }}
+      />
+
       {/* Toast Notification */}
       <div className={cn(
         "fixed top-24 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 rounded-2xl backdrop-blur-xl border shadow-2xl transition-all duration-500 pointer-events-none",
@@ -592,19 +620,7 @@ export default function App() {
           theme={theme}
           syncId={syncId}
           onSyncIdChange={setSyncId}
-          onGoogleLogin={async () => {
-            try {
-              const user = await signInWithGoogle();
-              if (user && user.email) {
-                setSyncId(user.email);
-                localStorage.setItem('dt_sync_id', user.email);
-                loadFromCloud(user.email);
-                showToast(`Linked: ${user.email}`);
-              }
-            } catch (e) {
-              console.error("Google Login Link Failed", e);
-            }
-          }}
+          onGoogleLogin={() => setIsAuthModalOpen(true)}
           isSyncing={isSyncing}
           onOpenCalendar={() => setIsCalendarOpen(true)}
           onQuickAdd={() => {
@@ -1527,6 +1543,13 @@ export default function App() {
           setIsFocusMode={setIsFocusMode}
           ambientSound={ambientSound}
           setAmbientSound={setAmbientSound}
+          userEmail={syncId.includes('@') ? syncId : ''}
+          onSignOut={async () => {
+            await signOut();
+            setSyncId('');
+            localStorage.removeItem('dt_sync_id');
+            showToast("Session Terminated Safely");
+          }}
           onClearData={() => {
             localStorage.clear();
             window.location.reload();
