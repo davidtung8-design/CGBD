@@ -110,20 +110,23 @@ export const Header: React.FC<HeaderProps> = ({
                </div>
              </div>
            ) : (
-             <div className="flex items-center gap-1 mr-2">
+             <div className="flex items-center gap-1 mr-2 relative z-[999]">
                <button 
-                 onClick={onSignIn}
-                 className="flex items-center gap-2 px-4 h-10 rounded-2xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-500 transition-all shadow-lg shadow-blue-900/40"
+                 onClick={(e) => {
+                   console.log("Login button clicked");
+                   onSignIn();
+                 }}
+                 className="flex items-center gap-2 px-4 h-12 rounded-2xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 active:scale-95 transition-all shadow-lg shadow-blue-900/40 cursor-pointer"
                >
-                 <LogIn size={14} />
+                 <LogIn size={16} />
                  <span>Login Sync</span>
                </button>
                <button 
                  onClick={() => setShowHelp(!showHelp)}
-                 className="w-10 h-10 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center border border-slate-700 hover:text-blue-400 transition-all"
+                 className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center border border-slate-700 hover:text-blue-400 active:scale-95 transition-all cursor-pointer"
                  title="登录报错点这里"
                >
-                 <HelpCircle size={18} />
+                 <HelpCircle size={20} />
                </button>
              </div>
            )}
