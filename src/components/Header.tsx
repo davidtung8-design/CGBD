@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DTIcon } from './DTIcon';
 import { ThemeConfig } from '../types';
-import { Calendar, Zap, Download, Upload, RefreshCw, Send, FileText, Mail, LogIn, LogOut, User as UserIcon } from 'lucide-react';
+import { Calendar, Zap, Download, Upload, RefreshCw, Send, FileText, Mail, LogIn, LogOut, User as UserIcon, HelpCircle, Copy, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { User } from 'firebase/auth';
 
@@ -35,9 +35,49 @@ export const Header: React.FC<HeaderProps> = ({
   onSignOut
 }) => {
   const currentDate = new Date();
+  const [showHelp, setShowHelp] = useState(false);
+  const [copied, setCopied] = useState(false);
   
+  const currentDomain = window.location.hostname;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(currentDomain);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 shrink-0 gap-4 mt-4">
+    <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 shrink-0 gap-4 mt-4 relative">
+      {showHelp && (
+        <div className="absolute top-full right-0 mt-4 z-[2000] w-80 bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex justify-between items-start mb-4">
+            <h4 className="text-blue-400 font-bold text-xs uppercase tracking-widest">Firebase 登录报错解决方法</h4>
+            <button onClick={() => setShowHelp(false)} className="text-slate-500 hover:text-white">
+              <LogIn size={14} className="rotate-45" />
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-300 mb-4 leading-relaxed">
+            如果您看到 "The requested action is invalid"，是因为域名未授权。请将下方域名添加到 Firebase 控制台的 <strong>Authorized domains</strong> 列表中：
+          </p>
+          <div className="bg-black/40 border border-slate-800 rounded-xl p-3 flex items-center justify-between mb-6 group cursor-pointer" onClick={copyToClipboard}>
+            <code className="text-[10px] text-emerald-400 font-mono truncate mr-2">{currentDomain}</code>
+            {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className="text-slate-500 group-hover:text-blue-400" />}
+          </div>
+          <ol className="text-[9px] text-slate-400 space-y-2 list-decimal ml-3">
+            <li>进入 Firebase Console -> Build -> Authentication。</li>
+            <li>点击 <strong>Settings</strong> -> <strong>Authorized domains</strong>。</li>
+            <li>点击 <strong>Add domain</strong> 并粘贴上方域名。</li>
+            <li>确保 <strong>Sign-in method</strong> 中的 Google 已开启。</li>
+          </ol>
+          <button 
+            onClick={() => setShowHelp(false)}
+            className="w-full mt-6 py-2 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold rounded-xl transition-colors"
+          >
+            知道了
+          </button>
+        </div>
+      )}
+
       <div>
         <div className="flex items-center gap-3">
           <DTIcon theme={theme} size={32} />
@@ -70,13 +110,22 @@ export const Header: React.FC<HeaderProps> = ({
                </div>
              </div>
            ) : (
-             <button 
-               onClick={onSignIn}
-               className="flex items-center gap-2 px-4 h-10 rounded-2xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-500 transition-all shadow-lg shadow-blue-900/40 mr-2"
-             >
-               <LogIn size={14} />
-               <span>Login Sync</span>
-             </button>
+             <div className="flex items-center gap-1 mr-2">
+               <button 
+                 onClick={onSignIn}
+                 className="flex items-center gap-2 px-4 h-10 rounded-2xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-500 transition-all shadow-lg shadow-blue-900/40"
+               >
+                 <LogIn size={14} />
+                 <span>Login Sync</span>
+               </button>
+               <button 
+                 onClick={() => setShowHelp(!showHelp)}
+                 className="w-10 h-10 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center border border-slate-700 hover:text-blue-400 transition-all"
+                 title="登录报错点这里"
+               >
+                 <HelpCircle size={18} />
+               </button>
+             </div>
            )}
 
            <button 
