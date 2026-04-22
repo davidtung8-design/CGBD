@@ -262,8 +262,9 @@ export default function App() {
   // --- Helpers ---
   const todayKey = format(new Date(), 'yyyy-MM-dd');
   const currentTodos = todoItems[todayKey] || [];
-  const currentDaily = dailyData[todayKey] || { r: "", g: "", sixTasks: ["", "", "", "", "", ""] };
+  const currentDaily = dailyData[todayKey] || { r: "", g: "", sixTasks: ["", "", "", "", "", ""], protocol5352111: [] };
   const safeSixTasks = currentDaily.sixTasks || ["", "", "", "", "", ""];
+  const safeProtocol = currentDaily.protocol5352111 || [];
 
   const currentMonday = useMemo(() => {
     const start = startOfWeek(baseDate, { weekStartsOn: 1 });
@@ -553,6 +554,113 @@ export default function App() {
             "bento-grid transition-all duration-700",
             isFocusMode && "gap-10 scale-[0.99] opacity-90"
           )}>
+            {/* 5352111 Elite Discipline Protocol */}
+            <div className={cn(
+              "bento-card md:col-span-8 p-8 relative overflow-hidden",
+              isDarkMode ? "bg-slate-900/60 border-blue-500/20" : "bg-blue-50/30 border-blue-100"
+            )}>
+              <div className="absolute top-0 right-0 p-8 opacity-5">
+                <Zap size={160} className="text-blue-500" />
+              </div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20">
+                      <Zap size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 leading-none">Elite Protocol 5352111</h3>
+                      <p className="text-[9px] text-slate-500 mt-1 uppercase font-medium">每日核心作业纪律 · Core Discipline</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-mono font-bold text-blue-500 tracking-tighter">7.75h</span>
+                    <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-widest">Total Required</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { id: 'a', val: '5', label: '新朋友', desc: '认识5位新朋友/陌生人', time: '15 Min' },
+                    { id: 'b', val: '3', label: '工作预约', desc: '预定3个工作相关预约', time: '135 Min' },
+                    { id: 'c', val: '5', label: '保户电话', desc: '持打5电话于保户/准保户', time: '15 Min' },
+                    { id: 'd', val: '2', label: '大客户', desc: '应酬影响中心/大客户', time: '120 Min' },
+                    { id: 'e', val: '1', label: '复习学习', desc: '复习/学习业务相关知识', time: '60 Min' },
+                    { id: 'f', val: '1', label: '深度阅读', desc: '阅读业务相关知识内容', time: '60 Min' },
+                    { id: 'g', val: '1', label: '文书处理', desc: '文书极速处理', time: '60 Min' },
+                    { id: 'h', val: '8', label: '8/8/8 平衡', desc: '睡眠/工作/休闲平衡分配', time: '24 Hour' }
+                  ].map((item, i) => {
+                    const isCompleted = safeProtocol.includes(item.id);
+                    return (
+                      <div 
+                        key={i} 
+                        onClick={() => {
+                          setDailyData(prev => {
+                            const current = prev[todayKey] || { r: "", g: "", sixTasks: ["", "", "", "", "", ""], protocol5352111: [] };
+                            const protocol = current.protocol5352111 || [];
+                            const isCurrentlyCompleted = protocol.includes(item.id);
+                            const newProtocol = isCurrentlyCompleted 
+                              ? protocol.filter(id => id !== item.id)
+                              : [...protocol, item.id];
+                            
+                            return { 
+                              ...prev, 
+                              [todayKey]: { ...current, protocol5352111: newProtocol } 
+                            };
+                          });
+                          if (!isCompleted) showToast(`Node ${item.id.toUpperCase()} Check OK`);
+                        }}
+                        className={cn(
+                          "p-4 rounded-2xl border transition-all hover:translate-y-[-1px] cursor-pointer relative group/item overflow-hidden",
+                          isDarkMode 
+                            ? (isCompleted ? "bg-blue-600/20 border-blue-500/50" : "bg-slate-900/40 border-slate-800 hover:border-slate-700") 
+                            : (isCompleted ? "bg-blue-50 border-blue-200 shadow-sm" : "bg-white border-slate-200 hover:border-blue-200 shadow-sm")
+                        )}
+                      >
+                        {isCompleted && (
+                          <div className="absolute top-0 right-0 p-1 opacity-20">
+                            <CheckCircle2 size={48} className="text-blue-500" />
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between items-start mb-3 relative z-10">
+                          <div className={cn(
+                            "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300",
+                            isCompleted 
+                              ? "bg-blue-500 border-blue-500 text-white" 
+                              : "border-slate-400 bg-transparent text-transparent"
+                          )}>
+                            <CheckCircle2 size={14} className={isCompleted ? "opacity-100 scale-100" : "opacity-0 scale-50"} />
+                          </div>
+                          {!isCompleted && <span className="text-[7px] font-bold text-blue-500/50 uppercase tracking-tighter">Click to check</span>}
+                          <span className="text-[9px] font-mono text-slate-500 uppercase font-bold">{item.val} qty</span>
+                        </div>
+                        
+                        <div className="relative z-10">
+                          <p className={cn(
+                            "text-[10px] font-bold uppercase tracking-widest leading-none mb-1.5 transition-colors",
+                            isCompleted 
+                              ? (isDarkMode ? "text-blue-400" : "text-blue-700") 
+                              : (isDarkMode ? "text-slate-300" : "text-slate-900")
+                          )}>{item.label}</p>
+                          <p className={cn(
+                            "text-[9px] leading-tight transition-colors mb-3",
+                            isDarkMode 
+                              ? (isCompleted ? "text-slate-400" : "text-slate-500") 
+                              : "text-slate-500"
+                          )}>{item.desc}</p>
+                          <div className="flex justify-between items-center text-[8px] font-mono uppercase tracking-tighter">
+                            <span className={isCompleted ? "text-blue-500" : "text-slate-600"}>{isCompleted ? 'Node Sync OK' : 'Pending'}</span>
+                            <span className="text-slate-600">{item.time}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
             {/* Goal Tracking - Large Bento Card */}
             <div className="bento-card md:col-span-8 p-8 overflow-hidden relative group">
               <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
@@ -790,61 +898,6 @@ export default function App() {
                       );
                     });
                   })()}
-                </div>
-              </div>
-            </div>
-
-            {/* 5352111 Elite Discipline Protocol */}
-            <div className={cn(
-              "bento-card md:col-span-8 p-8 relative overflow-hidden",
-              isDarkMode ? "bg-slate-900/60 border-blue-500/20" : "bg-blue-50/30 border-blue-100"
-            )}>
-              <div className="absolute top-0 right-0 p-8 opacity-5">
-                <Zap size={160} className="text-blue-500" />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20">
-                      <Zap size={18} />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 leading-none">Elite Protocol 5352111</h3>
-                      <p className="text-[9px] text-slate-500 mt-1 uppercase font-medium">每日核心作业纪律 · Core Discipline</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-2xl font-mono font-bold text-blue-500 tracking-tighter">7.75h</span>
-                    <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-widest">Total Required</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[
-                    { id: 'a', val: '5', label: '新朋友', desc: '认识5位新朋友/陌生人', time: '15 Min' },
-                    { id: 'b', val: '3', label: '工作预约', desc: '预定3个工作相关预约', time: '135 Min' },
-                    { id: 'c', val: '5', label: '保户电话', desc: '持打5电话于保户/准保户', time: '15 Min' },
-                    { id: 'd', val: '2', label: '大客户', desc: '应酬影响中心/大客户', time: '120 Min' },
-                    { id: 'e', val: '1', label: '复习学习', desc: '复习/学习业务相关知识', time: '60 Min' },
-                    { id: 'f', val: '1', label: '深度阅读', desc: '阅读业务相关知识内容', time: '60 Min' },
-                    { id: 'g', val: '1', label: '文书处理', desc: '文书极速处理', time: '60 Min' },
-                    { id: 'h', val: '8', label: '8/8/8 平衡', desc: '睡眠/工作/休闲平衡分配', time: '24 Hour' }
-                  ].map((item, i) => (
-                    <div key={i} className={cn(
-                      "p-4 rounded-2xl border transition-all hover:translate-y-[-2px]",
-                      isDarkMode ? "bg-slate-950/40 border-slate-800 hover:border-blue-500/40" : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
-                    )}>
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-[10px] font-bold text-blue-500 px-2 py-0.5 bg-blue-500/10 rounded-full">{item.val}</span>
-                        <span className="text-[9px] font-mono text-slate-500 uppercase">{item.time}</span>
-                      </div>
-                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-2">{item.label}</p>
-                      <p className={cn(
-                        "text-[10px] leading-snug",
-                        isDarkMode ? "text-slate-500" : "text-slate-600"
-                      )}>{item.desc}</p>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>

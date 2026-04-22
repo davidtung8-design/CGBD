@@ -26,6 +26,7 @@ export interface DailyData {
   r: string; // reflection
   g: string; // gratitude
   sixTasks?: string[]; // 6 Most Important Things
+  protocol5352111?: string[]; // Completed IDs for 5352111 Elite Protocol
 }
 
 export interface MonthlyRecord {
