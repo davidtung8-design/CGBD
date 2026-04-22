@@ -432,8 +432,16 @@ export default function App() {
     document.body.removeChild(link);
   };
 
-  const handleSyncAppleCalendar = useCallback(() => {
-    // Generate RFC 5545 iCalendar content
+  const handleSyncAppleCalendar = useCallback(async () => {
+    // Filter only events from the current visible week (per HTML reference)
+    const currentWeekEvents = events.filter(e => e.weekOffset === viewOffset);
+    
+    if (currentWeekEvents.length === 0) {
+      alert("📅 当前周没有任务可同步 (No events in this week to sync)");
+      return;
+    }
+
+    // Generate RFC 5545 iCalendar content matching the verified HTML reference
     const icsContent: string[] = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
@@ -441,42 +449,48 @@ export default function App() {
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       'X-WR-CALNAME:David Tung Time Matrix',
-      'X-WR-TIMEZONE:UTC'
+      'X-WR-TIMEZONE:Asia/Kuala_Lumpur'
     ];
 
-    events.forEach(event => {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const formatICSDateLocal = (date: Date, hour: number) => {
+      const y = date.getFullYear();
+      const m = pad(date.getMonth() + 1);
+      const d = pad(date.getDate());
+      const h = pad(hour);
+      return `${y}${m}${d}T${h}0000`; // Floating time (local)
+    };
+
+    currentWeekEvents.forEach(event => {
       const activity = ACTIVITIES.find(a => a.id === event.activityId);
       const groupInfo = activity ? GROUP_CONFIG[activity.group as keyof typeof GROUP_CONFIG] : null;
       
-      // Calculate the specific date for this event instance
       const monday = startOfWeek(baseDate, { weekStartsOn: 1 });
       const weekMonday = addWeeks(monday, event.weekOffset);
       const eventDate = addDays(weekMonday, event.weekday === 0 ? 6 : event.weekday - 1);
       
-      const start = new Date(eventDate);
-      start.setHours(event.startHour, 0, 0, 0);
+      // DTSTAMP must be UTC
+      const dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
       
-      const end = new Date(eventDate);
-      end.setHours(event.endHour, 0, 0, 0);
-
-      const formatICSDate = (date: Date) => {
-        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-      };
+      // DTSTART/END use local floating time to match the HTML reference approach
+      const dtstart = formatICSDateLocal(eventDate, event.startHour);
+      const dtend = formatICSDateLocal(eventDate, event.endHour);
 
       icsContent.push('BEGIN:VEVENT');
       icsContent.push(`UID:${event.id}@david-tung-core.run`);
-      icsContent.push(`DTSTAMP:${formatICSDate(new Date())}`);
-      icsContent.push(`DTSTART:${formatICSDate(start)}`);
-      icsContent.push(`DTEND:${formatICSDate(end)}`);
+      icsContent.push(`DTSTAMP:${dtstamp}`);
+      icsContent.push(`DTSTART:${dtstart}`);
+      icsContent.push(`DTEND:${dtend}`);
       icsContent.push(`SUMMARY:${activity?.icon || '📅'} ${event.title || activity?.name || 'Scheduled Slot'}`);
       icsContent.push(`DESCRIPTION:Activity: ${activity?.name || 'General'}\\nGroup: ${groupInfo?.name || 'Matrix'}`);
       icsContent.push('END:VEVENT');
     });
 
+    icsContent.push('END:VCALENDAR');
     const icsString = icsContent.join('\r\n');
     
     try {
-      // Step 1: Prepare the file on the backend
+      showToast("正在准备同步当前周数据...");
       const response = await fetch('/api/calendar/prepare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -486,20 +500,13 @@ export default function App() {
       if (!response.ok) throw new Error('API Sync Failed');
       
       const { id } = await response.json();
-      
-      // Step 2: Redirect to the download URL
-      // On iOS, a direct link to a URL ending in .ics with the correct headers 
-      // is the most reliable way to trigger the "Add to Calendar" prompt.
-      const downloadUrl = `/api/calendar/download/${id}.ics`;
-      
-      // We use window.open for better iframe compatibility, or location.href
-      window.location.href = downloadUrl;
+      window.location.href = `/api/calendar/download/${id}.ics`;
       
     } catch (error) {
       console.error('Calendar sync error:', error);
-      alert('同步失败，请重试或联系开发者。');
+      alert('同步失败，请重试。');
     }
-  }, [events, baseDate]);
+  }, [events, baseDate, viewOffset]);
 
   // --- Rendering ---
   return (
