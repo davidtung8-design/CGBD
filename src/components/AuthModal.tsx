@@ -32,6 +32,8 @@ export function AuthModal({ isOpen, onClose, isDarkMode, showToast }: AuthModalP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Direct visual feedback for mobile users
+    alert("正在尝试连接身份验证服务器...\n(Connecting to server...)");
     console.log("Submitting auth form...", { email, isLogin });
     setIsLoading(true);
     try {
@@ -192,15 +194,15 @@ export function AuthModal({ isOpen, onClose, isDarkMode, showToast }: AuthModalP
               使用 Google 登录
             </button>
 
-            {isIframe && (
+            {(isSafari || isIframe) && (
               <a
                 href={window.location.href}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full mt-4 py-4 bg-amber-500 text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all"
+                className="w-full mt-4 py-4 bg-orange-500 text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-orange-500/30 active:scale-[0.98] transition-all"
               >
                 <ExternalLink size={18} />
-                在 Safari 中重新打开以登录
+                在独立 Safari 中打开 (解决登录无反应)
               </a>
             )}
 
