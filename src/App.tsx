@@ -20,7 +20,7 @@ import {
 } from 'date-fns';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, logout } from './lib/firebase';
+import { auth, logout, handleRedirectResult } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { AuthModal } from './components/AuthModal';
 import { PerformancePage } from './pages/PerformancePage';
@@ -167,6 +167,14 @@ export default function App() {
 
     setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
     
+    // Handle redirect result (for mobile Safari)
+    handleRedirectResult().then(currentUser => {
+      if (currentUser) {
+        setUser(currentUser);
+        showToast("Redirect Login Success");
+      }
+    });
+
     // Listen for Firebase Auth changes to auto-sync with email ID
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);

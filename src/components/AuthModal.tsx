@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Mail, Lock, User, X, Loader2, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Lock, User, X, Loader2, ArrowRight, AlertCircle, ExternalLink } from 'lucide-react';
 import { loginWithEmail, registerWithEmail, signInWithGoogle } from '../lib/firebase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -17,26 +17,39 @@ export function AuthModal({ isOpen, onClose, isDarkMode, showToast }: AuthModalP
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSafari, setIsSafari] = useState(false);
+  const [isIframe, setIsIframe] = useState(false);
+
+  useEffect(() => {
+    const isSafariUA = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const inIframe = window.self !== window.top;
+    setIsSafari(isSafariUA);
+    setIsIframe(inIframe);
+    
+    // Test if Firebase is available
+    console.log("Firebase Auth status:", !!loginWithEmail);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Submitting auth form...", { email, isLogin });
     setIsLoading(true);
     try {
       if (isLogin) {
         await loginWithEmail(email, password);
         showToast("登录成功 (Login Success)");
       } else {
-        await registerWithEmail(email, password, name);
+        await registerWithEmail(email, password, name || 'User');
         showToast("注册成功 (Registration Success)");
       }
       onClose();
     } catch (error: any) {
-      console.error(error);
-      const msg = error.code === 'auth/user-not-found' ? '用户不存在 (User not found)' :
-                  error.code === 'auth/wrong-password' ? '密码错误 (Wrong password)' :
-                  error.code === 'auth/email-already-in-use' ? '邮箱已被占用 (Email already in use)' :
+      console.error("Auth Error Detail:", error);
+      const msg = error.code === 'auth/user-not-found' ? '用户不存在' :
+                  error.code === 'auth/wrong-password' ? '密码错误' :
+                  error.code === 'auth/network-request-failed' ? '网络请求被拦截 (Safari 隐私限制)' :
                   error.message;
-      showToast(`错误: ${msg}`);
+      alert(`登录失败: ${msg}\n错误代码: ${error.code}`);
     } finally {
       setIsLoading(false);
     }
@@ -133,6 +146,18 @@ export function AuthModal({ isOpen, onClose, isDarkMode, showToast }: AuthModalP
                 />
               </div>
 
+              <div className={cn(
+                "p-3 rounded-xl border mb-2",
+                isDarkMode ? "bg-slate-900/50 border-slate-800" : "bg-slate-50 border-slate-200"
+              )}>
+                <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <AlertCircle size={10} /> 故障排除提示 / Troubleshooting
+                </p>
+                <p className="text-[10px] leading-relaxed opacity-80">
+                  如果您无法“点击登录”或无反应，通常是 Safari 拦截了认证。
+                </p>
+              </div>
+
               <button
                 type="submit"
                 disabled={isLoading}
@@ -167,6 +192,18 @@ export function AuthModal({ isOpen, onClose, isDarkMode, showToast }: AuthModalP
               使用 Google 登录
             </button>
 
+            {isIframe && (
+              <a
+                href={window.location.href}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full mt-4 py-4 bg-amber-500 text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all"
+              >
+                <ExternalLink size={18} />
+                在 Safari 中重新打开以登录
+              </a>
+            )}
+
             <div className="mt-8 text-center text-xs">
               <button
                 onClick={() => setIsLogin(!isLogin)}
@@ -175,6 +212,22 @@ export function AuthModal({ isOpen, onClose, isDarkMode, showToast }: AuthModalP
                 {isLogin ? "没有账户？立即注册" : "已有账户？点击登录"}
               </button>
             </div>
+
+            {isSafari && (
+              <div className={cn(
+                "mt-6 p-4 rounded-xl border flex flex-col gap-2",
+                isDarkMode ? "bg-amber-500/10 border-amber-500/20 text-amber-200" : "bg-amber-50 border-amber-200 text-amber-800"
+              )}>
+                <div className="flex items-center gap-2">
+                  <AlertCircle size={14} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">iOS Safari 安全策略</span>
+                </div>
+                <div className="space-y-2 opacity-80 text-[9px] leading-tight">
+                  <p>Safari 拦截了第三方 Cookie 导致无法认证。请点击上方的 **“在 Safari 中重新打开”** 按钮。</p>
+                  <p>如果仍然失败，请在右上角 **Sync ID** 处直接输入文字作为 ID 存取（无需登录）。</p>
+                </div>
+              </div>
+            )}
           </motion.div>
         </div>
       )}
