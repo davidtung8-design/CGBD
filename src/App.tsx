@@ -94,6 +94,7 @@ export default function App() {
   const [baseDate, setBaseDate] = useState(new Date());
 
   // --- UI States ---
+  const [isDataInitialized, setIsDataInitialized] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ day: number, hour: number, offset: number } | null>(null);
@@ -169,6 +170,32 @@ export default function App() {
     const savedSyncKey = localStorage.getItem('dt_sync_key');
     if (savedSyncKey) setSyncKey(savedSyncKey);
 
+    // --- One-Click Sync Link Detection ---
+    const params = new URLSearchParams(window.location.search);
+    const urlId = params.get('syncId');
+    const urlKey = params.get('syncKey');
+    
+    let activeSyncId = syncId;
+    let activeSyncKey = syncKey;
+
+    if (urlId) {
+      const targetId = urlId;
+      const targetKey = urlKey || "";
+      setSyncId(targetId);
+      setSyncKey(targetKey);
+      showToast("🔗 Sync Link Detected - Loading Cloud Data...");
+      
+      // Execute load immediately using the parsed values
+      loadFromCloud(targetId, targetKey);
+
+      // Clean URL for aesthetics
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (syncId) {
+      loadFromCloud(syncId, syncKey);
+    } else {
+      setIsDataInitialized(true);
+    }
+
     setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
     
     // Handle redirect result (for mobile Safari)
@@ -179,27 +206,24 @@ export default function App() {
       }
     });
 
-    // Listen for Firebase Auth changes to auto-sync with email ID
+    // Listen for Firebase Auth changes
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser && currentUser.email) {
-        // If logged in via Google/Email, use that as Sync ID automatically
         setSyncId(currentUser.email);
         localStorage.setItem('dt_sync_id', currentUser.email);
         loadFromCloud(currentUser.email, syncKey);
       }
     });
 
-    // Initial fetch from cloud if syncId exists
-    if (syncId) {
-      loadFromCloud(syncId, syncKey);
-    }
-
     return () => unsubscribe();
   }, []);
 
   const loadFromCloud = async (id: string, key?: string) => {
-    if (!id) return;
+    if (!id) {
+      setIsDataInitialized(true);
+      return;
+    }
     setIsSyncing(true);
     try {
       const res = await fetch(`/api/sync/load?userId=${encodeURIComponent(id)}&secretKey=${encodeURIComponent(key || "")}`);
@@ -207,6 +231,7 @@ export default function App() {
       
       if (res.status === 403) {
         showToast(result.error || "Password Mismatch");
+        setIsDataInitialized(true);
         return;
       }
 
@@ -216,10 +241,14 @@ export default function App() {
         if (data.perfData) setPerfData(data.perfData);
         if (data.todoItems) setTodoItems(data.todoItems);
         if (data.dailyData) setDailyData(data.dailyData);
-        showToast("Master Cloud: Data Loaded");
+        showToast("Master Cloud: Data Loaded (已加载同步数据)");
+      } else {
+        showToast("No cloud data found. Starting fresh. (无云端记录，新建同步帐号)");
       }
+      setIsDataInitialized(true);
     } catch (e) {
       console.error("Sync Load Failed", e);
+      setIsDataInitialized(true); // Allow local usage even if cloud fails
     } finally {
       setIsSyncing(false);
     }
@@ -228,7 +257,7 @@ export default function App() {
   const saveToCloud = async (id?: string, key?: string) => {
     const targetId = id || syncId;
     const targetKey = key || syncKey;
-    if (!targetId) return;
+    if (!targetId || !isDataInitialized) return; // CRITICAL: NEVER SAVE UNTIL LOADED
     
     setIsSyncing(true);
     try {
@@ -243,12 +272,33 @@ export default function App() {
       });
       const result = await res.json();
       if (res.status === 403) {
-        showToast(result.error);
+        showToast("同步已锁定：密码不匹配 (Access Denied: Key Mismatch)");
+      } else {
+        console.log("Auto-save successful");
       }
     } catch (e) {
       console.error("Sync Save Failed", e);
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const manualForceSync = async () => {
+    if (!syncId) {
+      showToast("请先设置同步 ID 和密码");
+      return;
+    }
+    
+    // Reset state before download to ensure clear view of "Download" vs "Empty"
+    setIsSyncing(true);
+    showToast("正在连接云端 (Connecting Master Cloud...)");
+    
+    try {
+       await loadFromCloud(syncId, syncKey);
+    } catch (e) {
+       showToast("加载失败，请检查密码");
+    } finally {
+       setIsSyncing(false);
     }
   };
 
@@ -281,8 +331,9 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('dt_sync_id', syncId);
     localStorage.setItem('dt_sync_key', syncKey);
-    if (syncId) saveToCloud();
-  }, [syncId, syncKey, events, perfData, todoItems, dailyData]);
+    // LOCK: Only save if we've successfully attempted initial load
+    if (syncId && isDataInitialized) saveToCloud();
+  }, [syncId, syncKey, events, perfData, todoItems, dailyData, isDataInitialized]);
 
   useEffect(() => {
     localStorage.setItem('dt_theme', themeKey);
@@ -627,10 +678,7 @@ export default function App() {
           syncKey={syncKey}
           onSyncIdChange={setSyncId}
           onSyncKeyChange={setSyncKey}
-          onAuthClick={() => {
-            if (syncId) loadFromCloud(syncId, syncKey);
-            else showToast("请输入 Sync ID 与密码 (Sync ID & Key required)");
-          }}
+          onAuthClick={manualForceSync}
           isLoggedIn={!!user}
           userEmail={user?.email || undefined}
           onLogout={async () => {
